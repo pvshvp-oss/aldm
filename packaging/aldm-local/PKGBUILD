@@ -1,11 +1,11 @@
 #! /usr/bin/env sh
 
-# Maintainer: shivanandvp <shivanandvp@rebornos.org>
+# Maintainer: shivanandvp <shivanandvp.oss@gmail.com> <shivanandvp@rebornos.org>
 
 pkgver=0.0.1
 pkgrel=1
 
-PACKAGE_NAME_STUB="archlinux-driver-manager"
+PACKAGE_NAME_STUB="aldm"
 pkgname="$PACKAGE_NAME_STUB-local"
 provides=("$PACKAGE_NAME_STUB")
 conflicts=("$PACKAGE_NAME_STUB" "$PACKAGE_NAME_STUB-git")

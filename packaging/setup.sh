@@ -3,7 +3,7 @@
 SCRIPT_DIRECTORY="$(dirname -- "$(readlink -f -- "$0")")"
 PROJECT_DIRECTORY="$(dirname -- "$SCRIPT_DIRECTORY")"
 BUILD_DIRECTORY="$PROJECT_DIRECTORY"/build
-PACKAGE_DIRECTORY_STUB="archlinux-driver-manager"
+PACKAGE_DIRECTORY_STUB="aldm"
 MODE="$(echo "$1" | tr "[:upper:]" "[:lower:]")"
 if [ "$MODE" != "stable" ] && [ "$MODE" != "git" ] && [ "$MODE" != "local" ]; then
     echo ""

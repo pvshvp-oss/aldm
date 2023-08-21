@@ -1,34 +1,26 @@
 #! /usr/bin/env sh
 
-# Maintainer: shivanandvp <shivanandvp@rebornos.org>
+# Maintainer: shivanandvp <shivanandvp.oss@gmail.com> <shivanandvp@rebornos.org>
 
 pkgver=0.0.1
 pkgrel=1
 
-PACKAGE_NAME_STUB="archlinux-driver-manager"
-pkgname="$PACKAGE_NAME_STUB-git"
+PACKAGE_NAME_STUB="aldm"
+pkgname="$PACKAGE_NAME_STUB"
 provides=("$PACKAGE_NAME_STUB")
-conflicts=("$PACKAGE_NAME_STUB" "$PACKAGE_NAME_STUB-local")
+conflicts=("$PACKAGE_NAME_STUB-local" "$PACKAGE_NAME_STUB-git")
 depends=('pacman' 'pciutils' 'usbutils')
 makedepends=('git' 'cargo')
-source=("git+https://github.com/shivanandvp/$PACKAGE_NAME_STUB") 
+source=("https://github.com/shivanandvp/$PACKAGE_NAME_STUB/archive/refs/tags/v${pkgver}.tar.gz")
 sha256sums=('SKIP')
-PROJECT_DIRECTORY="${srcdir}/$PACKAGE_NAME_STUB"
+PROJECT_DIRECTORY="${srcdir}/$PACKAGE_NAME_STUB-${pkgver}"
 RESOURCE_DIRECTORY="$PROJECT_DIRECTORY/packaging/resources"
 BUILD_DIRECTORY="$PROJECT_DIRECTORY/target"
 
 arch=('x86_64' 'aarch64')
 pkgdesc='A driver manager for Arch Linux.'
 url="https://github.com/shivanandvp/$PACKAGE_NAME_STUB"
-license=('MPL-2.0')
-
-pkgver() {
-    (   cd "${srcdir}/$PACKAGE_NAME_STUB"
-        set -o pipefail
-        git describe --long 2>/dev/null | sed 's/\([^-]*-g\)/r\1/;s/-/./g' ||
-        printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
-    )
-}
+license=('MPL-2.0')         
 
 prepare() {
     cd "$PROJECT_DIRECTORY"

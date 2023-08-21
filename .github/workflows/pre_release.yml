@@ -30,7 +30,7 @@ jobs:
         with: 
           name: Unstable Package
           path: |
-            packaging/archlinux-driver-manager-git/*.pkg.tar.*
+            packaging/aldm-git/*.pkg.tar.*
           if-no-files-found: error
   release:  
     needs: build        
@@ -73,4 +73,4 @@ jobs:
           tag_name: ${{ env.GIT_VERSION }}
           name: ${{ env.GIT_VERSION }}
           files: |
-            ${{ steps.download_package_step.outputs.download-path }}/packaging/archlinux-driver-manager-git/*.pkg.tar.*
+            ${{ steps.download_package_step.outputs.download-path }}/packaging/aldm-git/*.pkg.tar.*
