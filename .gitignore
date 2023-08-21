@@ -21,9 +21,12 @@ Cargo.lock
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
-
-# Local History for Visual Studio Code
 .history/
-
-# Built Visual Studio Code Extensions
 *.vsix
+
+# Packaging
+packaging/**/pkg
+packaging/**/src
+packaging/**/*.tar*
+packaging/**/aldm-git/aldm
+packaging/**/aldm/aldm*
