@@ -12,7 +12,7 @@ A driver manager for Arch Linux.
 
 ## Cloning
 
-In order to download the source code to your local computer for testing, or for development, you can clone from the remote repository using either SSH, or HTTPS. Below are instructions on how to do so using GitHub hosted code as remote.
+To download the source code to your local computer for testing, or for development, you can clone from the remote repository using either SSH, or HTTPS. Below are instructions on how to do so using GitHub hosted code as remote.
 
 ### HTTPS
 
@@ -58,23 +58,6 @@ OR
 
 ```bash
 git clone git@github.com:shivanandvp/aldm.git
-```
-
-## Local development
-
-### 1. Build
-
-The below script will build the program (and install any prerequisites). Change to the project directory (`cd aldm`) and run the below. You can specify any commandline parameters to `cargo build` by passing it to the below script
-
-```bash
-sh scripts/build.sh
-```
-
-### 2. Run
-Change to the project directory (`cd aldm`) and run the below. You can specify any commandline parameters to `aldm` by passing it to the below script
-
-```bash
-sh scripts/run.sh
 ```
 
 ## Packaging
