@@ -13,7 +13,7 @@ license=('MPL-2.0')
 # -------- # 
 # Specific #
 # -------- #
-pkgver=2023_08_24T11_50_03_05_00
+pkgver=2023_08_24T12_11_40_05_00
 pkgrel=1
 pkgname="$PACKAGE_NAME_STUB-local"
 conflicts=("$PACKAGE_NAME_STUB" "$PACKAGE_NAME_STUB-git")
@@ -35,7 +35,6 @@ build() {
         && RUSTUP_TOOLCHAIN=stable \
         cargo build \
             --release \
-            --locked \
             --all-features \
             --target-dir="target"
     )
