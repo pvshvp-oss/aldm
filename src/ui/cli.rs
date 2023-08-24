@@ -1,0 +1,39 @@
+pub struct Cli {}
+
+impl Launch for Cli {
+    fn launch() -> Result<(), crate::Error> {
+        Cli::init_log();
+        tracing::info!("Hello!");
+        Ok(())
+    }
+}
+
+impl InitLog for Cli {}
+
+#[derive(Debug, Snafu)]
+#[non_exhaustive]
+pub enum Error {
+    #[non_exhaustive]
+    #[snafu(display(""))]
+    Dummy {},
+}
+
+// region: IMPORTS
+
+use crate::app::Launch;
+use crate::app::logging::InitLog;
+use snafu::Snafu;
+
+// endregion: IMPORTS
+
+// region: MODULES
+
+mod cli_template {
+    #[derive(clap::Parser, Debug)]
+    pub struct CliTemplate {
+        #[clap(flatten)]
+        verbose: clap_verbosity_flag::Verbosity,
+    }
+}
+
+//endregion: MODULES

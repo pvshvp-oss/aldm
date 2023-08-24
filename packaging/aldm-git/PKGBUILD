@@ -2,26 +2,27 @@
 
 # Maintainer: shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>
 
-pkgver=0.0.1
-pkgrel=1
-
 PACKAGE_NAME_STUB="aldm"
-pkgname="$PACKAGE_NAME_STUB-git"
 provides=("$PACKAGE_NAME_STUB")
-conflicts=("$PACKAGE_NAME_STUB" "$PACKAGE_NAME_STUB-local")
-depends=('pacman' 'pciutils' 'usbutils')
-makedepends=('git' 'cargo')
-source=("git+https://github.com/shivanandvp/$PACKAGE_NAME_STUB") 
-sha256sums=('SKIP')
-PROJECT_DIRECTORY="${srcdir}/$PACKAGE_NAME_STUB"
-RESOURCE_DIRECTORY="$PROJECT_DIRECTORY/packaging/resources"
-BUILD_DIRECTORY="$PROJECT_DIRECTORY/target"
-
+depends=('pacman' 'pciutils' 'usbutils' 'gtk4')
 arch=('x86_64' 'aarch64')
 pkgdesc='A driver manager for Arch Linux.'
 url="https://github.com/shivanandvp/$PACKAGE_NAME_STUB"
-license=('MPL-2.0')
+license=('MPL-2.0') 
 
+# -------- # 
+# Specific #
+# -------- #
+pkgver=r7.8b7c6d7
+pkgrel=1
+pkgname="$PACKAGE_NAME_STUB-git"
+conflicts=("$PACKAGE_NAME_STUB" "$PACKAGE_NAME_STUB-local")
+makedepends=('git' 'cargo')
+source=("git+https://github.com/shivanandvp/$PACKAGE_NAME_STUB")
+sha256sums=('SKIP')
+prepare() {
+    export PROJECT_DIRECTORY="${srcdir}/$PACKAGE_NAME_STUB"
+}
 pkgver() {
     (   cd "${srcdir}/$PACKAGE_NAME_STUB"
         set -o pipefail
@@ -29,29 +30,22 @@ pkgver() {
         printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
     )
 }
+# -------- #
 
-prepare() {
-    cd "$PROJECT_DIRECTORY"
-    RUSTUP_TOOLCHAIN=stable \
-    cargo fetch \
-        --locked
+RESOURCE_DIRECTORY="$PROJECT_DIRECTORY/packaging/resources"
+BUILD_DIRECTORY="$PROJECT_DIRECTORY/target"
+build() {   
+    (   cd "$PROJECT_DIRECTORY" \
+        && RUSTUP_TOOLCHAIN=stable \
+        cargo build \
+            --release \
+            --all-features \
+            --target-dir="target"
+    )
 }
-
-build() {     
-    cd "$PROJECT_DIRECTORY"
-    RUSTUP_TOOLCHAIN=stable \
-    cargo build \
-        --release \
-        --locked \
-        --all-features \
-        --target-dir="target"
-}
-
 package() {
     # To bypass makepkg's dependency check during build-time
-    depends+=("$PACKAGE_NAME_STUB-db")
-
+    optdepends+=("$PACKAGE_NAME_STUB-db")
     install -Dm644 "$PROJECT_DIRECTORY/LICENSE" "$pkgdir/usr/share/licenses/$PACKAGE_NAME_STUB/LICENSE"
     install -Dm755 "$PROJECT_DIRECTORY/target/release/$PACKAGE_NAME_STUB" "$pkgdir/usr/bin/$PACKAGE_NAME_STUB"
-    # ln -s "/usr/bin/$PACKAGE_NAME_STUB" "$pkgdir/usr/bin/aldm" # The binary is already named aldm
 }

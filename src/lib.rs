@@ -1,38 +1,44 @@
-/// Captures the error contexts at the crate level
+lazy_static! {
+    pub static ref APP_NAME: &'static str = "aldm";
+}
+
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
-    CouldNotList {},
+    #[snafu(display("App:\n  {source}"))]
+    App {source: app::Error},
 
     #[non_exhaustive]
-    CouldNotSearch {},
+    #[snafu(display("UI:\n  {source}"))]
+    Ui {source: ui::Error},
 
     #[non_exhaustive]
-    CouldNotInstall {},
-
-    #[non_exhaustive]
-    CouldNotGenerateDatabase {},
+    #[snafu(display("Actions:\n  {source}"))]
+    Actions {source: actions::Error},
 }
 
 // region: IMPORTS
 
-use std::path::PathBuf;
 use lazy_static::lazy_static;
 use snafu::Snafu;
-use dirs::home_dir;
 
 // endregion: IMPORTS
 
 // region: MODULES
 
-/// For organization/grouping of commandline-related concerns
-mod cli;
+pub mod app;
+pub mod ui;
+pub mod data;
+pub mod actions;
 
 // endregion: MODULES
 
 // region: RE-EXPORTS
 
-pub use cli::Cli;
+pub use app::*;
+pub use ui::*; 
+pub use data::*;
+pub use actions::*;
 
 // endregion: RE-EXPORTS

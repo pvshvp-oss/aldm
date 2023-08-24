@@ -1,10 +1,8 @@
-pub struct Cli {}
+pub trait InitLog {
+    fn init_log() {
+        std::fs::create_dir("/tmp/aldm").unwrap_or_else(|_|{});
 
-impl Cli {
-    pub fn run() -> Result<(), crate::Error> {
-        std::fs::create_dir(LOG_DIR.clone().unwrap_or("".into())).unwrap_or_else(|_|{});
-
-        let file_appender = tracing_appender::rolling::hourly(LOG_DIR.clone().unwrap_or("".into()), *LOGFILE_NAME);
+        let file_appender = tracing_appender::rolling::hourly("/tmp/aldm", "aldm.log");
         let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
         let collector = tracing_subscriber::registry()
             .with(
@@ -15,27 +13,20 @@ impl Cli {
             .with(tracing_subscriber::fmt::Layer::new().with_writer(non_blocking));
         tracing::subscriber::set_global_default(collector)
             .expect("Unable to set a global collector");
-        tracing::info!("Hello!");
-        Ok(())
     }
-    
+}
+
+#[derive(Debug, Snafu)]
+#[non_exhaustive]
+pub enum Error {
+    #[non_exhaustive]
+    #[snafu(display(""))]
+    Dummy {},
 }
 
 // region: IMPORTS
 
-use crate::{LOGFILE_NAME, LOG_DIR};
 use tracing_subscriber::layer::SubscriberExt;
+use snafu::Snafu;
 
 // endregion: IMPORTS
-
-// region: MODULES
-
-mod cli_template {
-    #[derive(clap::Parser, Debug)]
-    pub struct CliTemplate {
-        #[clap(flatten)]
-        verbose: clap_verbosity_flag::Verbosity,
-    }
-}
-
-//endregion: MODULES
