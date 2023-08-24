@@ -1,6 +1,6 @@
 #! /usr/bin/env sh
 
-# Maintainer: shivanandvp <shivanandvp.oss@gmail.com> <shivanandvp@rebornos.org>
+# Maintainer: shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>
 
 pkgver=0.0.1
 pkgrel=1
@@ -41,10 +41,14 @@ build() {
 
 package() {
     # To bypass makepkg's dependency check during build-time
-    depends+=("$PACKAGE_NAME_STUB-db")
+    # depends+=("$PACKAGE_NAME_STUB-db")
 
-    cd "$PROJECT_DIRECTORY"
-    install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$PACKAGE_NAME_STUB/LICENSE"
-    install -Dm755 "target/release/$PACKAGE_NAME_STUB" "$pkgdir/usr/bin/$PACKAGE_NAME_STUB"
-    ln -s "/usr/bin/$PACKAGE_NAME_STUB" "$pkgdir/usr/bin/aldm"
+    install -Dm644 "$PROJECT_DIRECTORY/LICENSE" "$pkgdir/usr/share/licenses/$PACKAGE_NAME_STUB/LICENSE"
+    install -Dm755 "$PROJECT_DIRECTORY/target/release/$PACKAGE_NAME_STUB" "$pkgdir/usr/bin/$PACKAGE_NAME_STUB"
+    # ln -s "/usr/bin/$PACKAGE_NAME_STUB" "$pkgdir/usr/bin/aldm" # The binary is already named aldm
+    install -Dm644 "$RESOURCE_DIRECTORY/usr/lib/sysusers.d/aldm.conf" "$pkgdir/usr/lib/sysusers.d/aldm.conf"
+    install -Dm644 "$RESOURCE_DIRECTORY/usr/lib/tmpfiles.d/aldm.conf" "$pkgdir/usr/lib/tmpfiles.d/aldm.conf"
+
+    install -g aldm_users -dm770 "$pkgdir/var/log/aldm"
+    install -g aldm_users -dm750 "$pkgdir/etc/aldm"
 }

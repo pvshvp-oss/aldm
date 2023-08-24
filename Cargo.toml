@@ -1,0 +1,25 @@
+[package]
+name = "aldm"
+version = "0.0.1"
+edition = "2021"
+license = "MPL-2.0"
+authors = ["shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>"]
+readme = "README.md"
+repository = "https://gitlab.com/shivanandvp/aldm.git"
+description = "A driver manager for Arch Linux"
+# documentation = "https://docs.rs/aldm"
+keywords = ["driver", "drivers", "hardware", "arch"]
+categories = ["command-line-utilities"]
+exclude = ["packaging/*", ".github/*", "*.code-workspace"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.3", features = ["derive", "cargo", "wrap_help"] }
+clap-verbosity-flag = "2.0"
+dirs = "5.0.1"
+lazy_static = "1.4"
+snafu = "0.7"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

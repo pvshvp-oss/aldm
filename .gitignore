@@ -30,3 +30,8 @@ packaging/**/src
 packaging/**/*.tar*
 packaging/**/aldm-git/aldm
 packaging/**/aldm/aldm*
+
+
+# Added by cargo
+
+/target
