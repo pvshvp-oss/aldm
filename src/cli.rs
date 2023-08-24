@@ -18,6 +18,7 @@ impl Cli {
         tracing::info!("Hello!");
         Ok(())
     }
+    
 }
 
 // region: IMPORTS

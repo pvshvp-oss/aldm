@@ -1,11 +1,3 @@
-lazy_static! {
-    pub static ref LOG_DIR: Option<PathBuf> = home_dir().map(|mut p| {
-        p.push("aldm");
-        p
-    });
-    pub static ref LOGFILE_NAME: &'static str = "aldm.log";
-}
-
 /// Captures the error contexts at the crate level
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
