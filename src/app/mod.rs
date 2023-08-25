@@ -2,8 +2,8 @@ lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
 
-pub trait Launch {
-    fn launch() -> Result<(), crate::Error>;
+pub trait RunApp {
+    fn run_app() -> Result<Vec<WorkerGuard>, crate::Error>;
 }
 
 #[derive(Debug, Snafu)]
@@ -36,5 +36,6 @@ pub mod logging;
 
 pub use config::*;
 pub use logging::*;
+use tracing_appender::non_blocking::WorkerGuard;
 
 // endregion: RE-EXPORTS

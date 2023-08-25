@@ -1,12 +1,15 @@
 pub struct Cli {}
 
-impl Launch for Cli {
-    fn launch() -> Result<(), crate::Error> {
-        Cli::init_log(None)
+impl RunApp for Cli {
+    fn run_app() -> Result<Vec<WorkerGuard>, crate::Error> {
+        let _worker_guards = Cli::init_log(None)
             .context(LoggingSnafu {})
             .context(AppSnafu {})?;
-        tracing::info!("Hello!");
-        Ok(())
+        tracing::info!("This is info!");
+        tracing::warn!("This is warning!");
+        tracing::trace!("This is trace!");
+        tracing::error!("This is error!");
+        Ok(_worker_guards)
     }
 }
 
@@ -23,10 +26,11 @@ pub enum Error {
 // region: IMPORTS
 
 use crate::{
-    app::{logging::InitLog, Launch, LoggingSnafu},
+    app::{logging::InitLog, LoggingSnafu, RunApp},
     AppSnafu,
 };
 use snafu::{ResultExt, Snafu};
+use tracing_appender::non_blocking::WorkerGuard;
 
 // endregion: IMPORTS
 

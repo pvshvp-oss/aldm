@@ -1,7 +1,7 @@
 pub struct Gui {}
 
-impl Launch for Gui {
-    fn launch() -> Result<(), crate::Error> {
+impl RunApp for Gui {
+    fn run_app() -> Result<Vec<WorkerGuard>, crate::Error> {
         todo!();
     }
 }
@@ -19,7 +19,8 @@ pub enum Error {
 // region: IMPORTS
 
 use crate::app::logging::InitLog;
-use crate::app::Launch;
+use crate::app::RunApp;
 use snafu::Snafu;
+use tracing_appender::non_blocking::WorkerGuard;
 
 // endregion: IMPORTS

@@ -1,5 +1,7 @@
 pub trait InitLog {
-    fn init_log(verbosity: Option<clap_verbosity_flag::LevelFilter>) -> Result<(), Error> {
+    fn init_log(
+        verbosity: Option<clap_verbosity_flag::LevelFilter>,
+    ) -> Result<Vec<WorkerGuard>, Error> {
         let log_dir_path = xdg::BaseDirectories::with_prefix(*APP_NAME)
             .context(BaseDirectoriesSnafu {})?
             .create_state_directory("")
@@ -36,11 +38,11 @@ pub trait InitLog {
         tracing::subscriber::set_global_default(subscriber)
             .expect("Unable to set a global collector");
 
-        tracing::info!("This is info!");
-        tracing::warn!("This is warning!");
-        tracing::warn!("This is trace!");
-
-        Ok(())
+        Ok(vec![
+            _file_writer_guard,
+            _stdout_writer_guard,
+            _stderr_writer_guard,
+        ])
     }
 }
 
@@ -65,6 +67,7 @@ use crate::app::APP_NAME;
 use snafu::{ResultExt, Snafu};
 use std::io;
 use tracing::Level;
+use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
     filter::{filter_fn, LevelFilter},
     fmt,
