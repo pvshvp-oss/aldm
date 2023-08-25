@@ -15,6 +15,7 @@ pub trait InitLog {
             tracing_appender::non_blocking(io::stderr());
 
         let log_file_layer = fmt::Layer::new()
+            .pretty()
             .with_writer(non_blocking_file_writer)
             .with_filter(LevelFilter::TRACE);
         let stdout_layer = fmt::Layer::new()
@@ -22,7 +23,8 @@ pub trait InitLog {
             .with_filter(
                 (verbosity.and_then(|v: clap_verbosity_flag::LevelFilter| v.as_str().parse().ok()))
                     .unwrap_or(LevelFilter::INFO),
-            );
+            )
+            .with_filter(filter_fn(|metadata| metadata.level() > &Level::WARN));
         let stderr_layer = fmt::Layer::new()
             .with_writer(non_blocking_stderr_writer)
             .with_filter(LevelFilter::WARN);
@@ -34,8 +36,9 @@ pub trait InitLog {
         tracing::subscriber::set_global_default(subscriber)
             .expect("Unable to set a global collector");
 
-        tracing::info!("Hello World!");
-        tracing::warn!("WARNING");
+        tracing::info!("This is info!");
+        tracing::warn!("This is warning!");
+        tracing::warn!("This is trace!");
 
         Ok(())
     }
@@ -61,6 +64,12 @@ pub enum Error {
 use crate::app::APP_NAME;
 use snafu::{ResultExt, Snafu};
 use std::io;
-use tracing_subscriber::{filter::LevelFilter, fmt, layer::SubscriberExt, EnvFilter, Layer};
+use tracing::Level;
+use tracing_subscriber::{
+    filter::{filter_fn, LevelFilter},
+    fmt,
+    layer::SubscriberExt,
+    EnvFilter, Layer,
+};
 
 // endregion: IMPORTS
