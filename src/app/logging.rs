@@ -18,9 +18,20 @@ pub trait InitLog {
 
         let log_file_layer = fmt::Layer::new()
             .pretty()
+            .with_ansi(true)
+            .with_file(true)
+            .with_level(true)
+            .with_line_number(true)
+            .with_target(true)
             .with_writer(non_blocking_file_writer)
             .with_filter(LevelFilter::TRACE);
         let stdout_layer = fmt::Layer::new()
+            .with_ansi(true)
+            .with_file(false)
+            .with_level(false)
+            .with_line_number(false)
+            .with_target(false)
+            .without_time()
             .with_writer(non_blocking_stdout_writer)
             .with_filter(
                 (verbosity.and_then(|v: clap_verbosity_flag::LevelFilter| v.as_str().parse().ok()))
@@ -28,6 +39,12 @@ pub trait InitLog {
             )
             .with_filter(filter_fn(|metadata| metadata.level() > &Level::WARN));
         let stderr_layer = fmt::Layer::new()
+            .with_ansi(true)
+            .with_file(false)
+            .with_level(true)
+            .with_line_number(false)
+            .with_target(false)
+            .without_time()
             .with_writer(non_blocking_stderr_writer)
             .with_filter(LevelFilter::WARN);
 
@@ -72,7 +89,7 @@ use tracing_subscriber::{
     filter::{filter_fn, LevelFilter},
     fmt,
     layer::SubscriberExt,
-    EnvFilter, Layer,
+    Layer,
 };
 
 // endregion: IMPORTS
