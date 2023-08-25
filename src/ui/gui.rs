@@ -12,14 +12,14 @@ impl InitLog for Gui {}
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
-    #[snafu(display(""))]
+    #[snafu(display(""), visibility(pub))]
     Dummy {},
 }
 
 // region: IMPORTS
 
-use crate::app::Launch;
 use crate::app::logging::InitLog;
+use crate::app::Launch;
 use snafu::Snafu;
 
 // endregion: IMPORTS

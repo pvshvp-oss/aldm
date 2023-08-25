@@ -4,7 +4,7 @@ pub trait Config {}
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
-    #[snafu(display(""))]
+    #[snafu(display(""), visibility(pub))]
     Dummy {},
 }
 

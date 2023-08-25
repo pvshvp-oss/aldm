@@ -2,7 +2,9 @@ pub struct Cli {}
 
 impl Launch for Cli {
     fn launch() -> Result<(), crate::Error> {
-        Cli::init_log();
+        Cli::init_log(None)
+            .context(LoggingSnafu {})
+            .context(AppSnafu {})?;
         tracing::info!("Hello!");
         Ok(())
     }
@@ -14,15 +16,17 @@ impl InitLog for Cli {}
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
-    #[snafu(display(""))]
+    #[snafu(display(""), visibility(pub))]
     Dummy {},
 }
 
 // region: IMPORTS
 
-use crate::app::Launch;
-use crate::app::logging::InitLog;
-use snafu::Snafu;
+use crate::{
+    app::{logging::InitLog, Launch, LoggingSnafu},
+    AppSnafu,
+};
+use snafu::{ResultExt, Snafu};
 
 // endregion: IMPORTS
 

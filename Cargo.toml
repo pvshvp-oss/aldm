@@ -33,3 +33,4 @@ tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 relm4 = "0.6"
 relm4-components = "0.6"
+xdg = "2.5"
