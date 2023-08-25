@@ -2,12 +2,14 @@ pub struct Cli {}
 
 impl RunApp for Cli {
     fn run_app() -> Result<Vec<WorkerGuard>, crate::Error> {
-        let _worker_guards = Cli::init_log(None)
+        let log_level_filter = clap_verbosity_flag::LevelFilter::Debug;
+        let _worker_guards = Cli::init_log(log_level_filter.as_str().parse().ok())
             .context(LoggingSnafu {})
             .context(AppSnafu {})?;
+        tracing::trace!("This is trace!");
+        tracing::debug!("This is debug!");
         tracing::info!("This is info!");
         tracing::warn!("This is warning!");
-        tracing::trace!("This is trace!");
         tracing::error!("This is error!");
         Ok(_worker_guards)
     }

@@ -1,7 +1,5 @@
 pub trait InitLog {
-    fn init_log(
-        verbosity: Option<clap_verbosity_flag::LevelFilter>,
-    ) -> Result<Vec<WorkerGuard>, Error> {
+    fn init_log(log_level_filter: Option<LevelFilter>) -> Result<Vec<WorkerGuard>, Error> {
         let log_dir_path = xdg::BaseDirectories::with_prefix(*APP_NAME)
             .context(BaseDirectoriesSnafu {})?
             .create_state_directory("")
@@ -33,10 +31,7 @@ pub trait InitLog {
             .with_target(false)
             .without_time()
             .with_writer(non_blocking_stdout_writer)
-            .with_filter(
-                (verbosity.and_then(|v: clap_verbosity_flag::LevelFilter| v.as_str().parse().ok()))
-                    .unwrap_or(LevelFilter::INFO),
-            )
+            .with_filter(log_level_filter.unwrap_or(LevelFilter::INFO))
             .with_filter(filter_fn(|metadata| metadata.level() > &Level::WARN));
         let stderr_layer = fmt::Layer::new()
             .with_ansi(true)
@@ -53,7 +48,7 @@ pub trait InitLog {
             .with(stdout_layer)
             .with(stderr_layer);
         tracing::subscriber::set_global_default(subscriber)
-            .expect("Unable to set a global collector");
+            .context(GlobalDefaultSubscriberSnafu {})?;
 
         Ok(vec![
             _file_writer_guard,
@@ -76,6 +71,15 @@ pub enum Error {
     #[non_exhaustive]
     #[snafu(display("Could not create log directory: {source}"), visibility(pub))]
     LogDirectory { source: io::Error },
+
+    #[non_exhaustive]
+    #[snafu(
+        display("Could not set global default tracing subscriber: {source}"),
+        visibility(pub)
+    )]
+    GlobalDefaultSubscriber {
+        source: tracing::subscriber::SetGlobalDefaultError,
+    },
 }
 
 // region: IMPORTS
