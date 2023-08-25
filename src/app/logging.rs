@@ -10,9 +10,9 @@ pub trait InitLog {
         let (non_blocking_file_writer, _file_writer_guard) =
             tracing_appender::non_blocking(file_appender);
         let (non_blocking_stdout_writer, _stdout_writer_guard) =
-            tracing_appender::non_blocking(io::stdout());
+            tracing_appender::non_blocking(anstream::stdout());
         let (non_blocking_stderr_writer, _stderr_writer_guard) =
-            tracing_appender::non_blocking(io::stderr());
+            tracing_appender::non_blocking(anstream::stderr());
 
         let log_file_layer = fmt::Layer::new()
             .pretty()
@@ -70,7 +70,7 @@ pub enum Error {
 
     #[non_exhaustive]
     #[snafu(display("Could not create log directory: {source}"), visibility(pub))]
-    LogDirectory { source: io::Error },
+    LogDirectory { source: std::io::Error },
 
     #[non_exhaustive]
     #[snafu(
@@ -86,7 +86,6 @@ pub enum Error {
 
 use crate::app::APP_NAME;
 use snafu::{ResultExt, Snafu};
-use std::io;
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
