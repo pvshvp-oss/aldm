@@ -1,0 +1,4 @@
+blank_lines_upper_bound = 2
+chain_width = 20
+combine_control_expr = false
+wrap_comments = true
