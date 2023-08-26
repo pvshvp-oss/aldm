@@ -4,6 +4,14 @@ impl RunApp for Cli {
     fn run_app() -> Result<Option<Box<dyn Any>>, crate::Error> {
         let cli_input = CliTemplate::parse();
 
+        if cli_input
+            .global_arguments
+            .is_uncolored()
+        {
+            anstream::ColorChoice::Never.write_global();
+            owo_colors::set_override(false);
+        }
+
         let _worker_guards = Cli::init_log(
             cli_input
                 .global_arguments
@@ -28,6 +36,9 @@ impl InitLog for Cli {}
 pub trait CliModifier {
     fn verbosity_filter(&self) -> Option<LevelFilter>;
     fn is_uncolored(&self) -> bool;
+    fn is_colored(&self) -> bool {
+        !self.is_uncolored()
+    }
     fn is_json(&self) -> bool;
 }
 
@@ -52,7 +63,14 @@ impl CliModifier for GlobalArguments {
     }
 
     fn is_uncolored(&self) -> bool {
-        self.plain_flag || self.json_flag
+        self.plain_flag
+            || self.json_flag
+            || self.no_color_flag
+            || env::var(format!(
+                "{}_NO_COLOR",
+                String::from(*APP_NAME).to_uppercase()
+            ))
+            .map_or(false, |value| !value.is_empty())
     }
 
     fn is_json(&self) -> bool {
@@ -73,13 +91,12 @@ pub enum Error {
 use crate::{
     app::{logging::InitLog, LoggingSnafu, RunApp},
     cli::cli_template::CliTemplate,
-    AppSnafu,
+    AppSnafu, APP_NAME,
 };
 use clap::Parser;
-use clap_verbosity_flag::{Level, LogLevel};
 use owo_colors::{AnsiColors, OwoColorize};
 use snafu::{ResultExt, Snafu};
-use std::any::Any;
+use std::{any::Any, env};
 use tracing_subscriber::filter::LevelFilter;
 
 use self::cli_template::GlobalArguments;
@@ -115,6 +132,9 @@ mod cli_template {
 
         #[clap(long = "debug", help = "Output debug messages.", global = true)]
         pub debug_flag: bool,
+
+        #[clap(long = "no-color", help = "Disable output coloring.", global = true)]
+        pub no_color_flag: bool,
 
         #[clap(flatten)]
         pub verbose: Verbosity<InfoLevel>,

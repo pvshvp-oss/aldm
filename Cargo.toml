@@ -41,7 +41,7 @@ snafu = "0.7"
 clap = { version = "4.4", features = ["derive", "cargo", "wrap_help", "env"] }
 clap-verbosity-flag = "2.0"
 anstream = "0.5"
-owo-colors = "3.5"
+owo-colors = {version = "3.5", features = ["supports-colors"]}
 
 # GUI
 relm4 = "0.6"
