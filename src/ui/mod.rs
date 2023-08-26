@@ -2,12 +2,18 @@
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
-    #[snafu(display("CLI:\n  {source}"), visibility(pub))]
-    Cli { source: cli::Error },
+    #[snafu(display("in the CLI: {source}"), visibility(pub))]
+    Cli {
+        #[snafu(backtrace)]
+        source: cli::Error,
+    },
 
     #[non_exhaustive]
-    #[snafu(display("GUI:\n  {source}"), visibility(pub))]
-    Gui { source: gui::Error },
+    #[snafu(display("in the GUI: {source}"), visibility(pub))]
+    Gui {
+        #[snafu(backtrace)]
+        source: gui::Error,
+    },
 }
 
 // region: IMPORTS

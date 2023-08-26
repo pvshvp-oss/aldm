@@ -2,16 +2,25 @@
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
-    #[snafu(display("App:\n  {source}"), visibility(pub))]
-    App { source: app::Error },
+    #[snafu(display("in the application: {source}"), visibility(pub))]
+    App {
+        #[snafu(backtrace)]
+        source: app::Error,
+    },
 
     #[non_exhaustive]
-    #[snafu(display("UI:\n  {source}"), visibility(pub))]
-    Ui { source: ui::Error },
+    #[snafu(display("in the UI: {source}"), visibility(pub))]
+    Ui {
+        #[snafu(backtrace)]
+        source: ui::Error,
+    },
 
     #[non_exhaustive]
-    #[snafu(display("Actions:\n  {source}"), visibility(pub))]
-    Actions { source: actions::Error },
+    #[snafu(display("in an action:{source}"), visibility(pub))]
+    Actions {
+        #[snafu(backtrace)]
+        source: actions::Error,
+    },
 }
 
 // region: IMPORTS

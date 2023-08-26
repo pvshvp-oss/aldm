@@ -10,12 +10,18 @@ pub trait RunApp {
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
-    #[snafu(display("Logging:\n  {source}"), visibility(pub))]
-    Logging { source: logging::Error },
+    #[snafu(display("in logging: {source}"), visibility(pub))]
+    Logging {
+        #[snafu(backtrace)]
+        source: logging::Error,
+    },
 
     #[non_exhaustive]
-    #[snafu(display("Config:\n  {source}"), visibility(pub))]
-    Config { source: config::Error },
+    #[snafu(display("in configuration: {source}"), visibility(pub))]
+    Config {
+        #[snafu(backtrace)]
+        source: config::Error,
+    },
 }
 
 // region: IMPORTS

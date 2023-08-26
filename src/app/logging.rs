@@ -63,18 +63,21 @@ pub trait InitLog {
 pub enum Error {
     #[non_exhaustive]
     #[snafu(
-        display("Could not retreive XDG base directories: {source}"),
+        display("could not retreive XDG base directories': {source}"),
         visibility(pub)
     )]
     BaseDirectories { source: xdg::BaseDirectoriesError },
 
     #[non_exhaustive]
-    #[snafu(display("Could not create log directory: {source}"), visibility(pub))]
+    #[snafu(
+        display("could not create the log directory: {source}"),
+        visibility(pub)
+    )]
     LogDirectory { source: std::io::Error },
 
     #[non_exhaustive]
     #[snafu(
-        display("Could not set global default tracing subscriber: {source}"),
+        display("could not set the global default tracing subscriber: {source}"),
         visibility(pub)
     )]
     GlobalDefaultSubscriber {
