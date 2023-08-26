@@ -1,7 +1,7 @@
 pub struct Cli {}
 
 impl RunApp for Cli {
-    fn run_app() -> Result<Box<dyn Any>, crate::Error> {
+    fn run_app() -> Result<Option<Box<dyn Any>>, crate::Error> {
         let log_level_filter = clap_verbosity_flag::LevelFilter::Trace;
         let _worker_guards = Cli::init_log(log_level_filter.as_str().parse().ok())
             .context(LoggingSnafu {})
@@ -11,7 +11,7 @@ impl RunApp for Cli {
         tracing::info!("This is {}", "info!".color(AnsiColors::Green));
         tracing::warn!("This is {}", "warn!".color(AnsiColors::Yellow));
         tracing::error!("This is {}", "error!".color(AnsiColors::Red));
-        Ok(Box::new(_worker_guards))
+        Ok(Some(Box::new(_worker_guards)))
     }
 }
 

@@ -1,7 +1,7 @@
 pub struct Gui {}
 
 impl RunApp for Gui {
-    fn run_app() -> Result<Box<dyn Any>, crate::Error> {
+    fn run_app() -> Result<Option<Box<dyn Any>>, crate::Error> {
         todo!();
     }
 }
