@@ -43,6 +43,5 @@ pub mod logging;
 
 pub use config::*;
 pub use logging::*;
-use tracing_appender::non_blocking::WorkerGuard;
 
 // endregion: RE-EXPORTS

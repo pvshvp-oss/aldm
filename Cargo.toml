@@ -38,7 +38,7 @@ xdg = "2.5"
 snafu = "0.7"
 
 # CLI
-clap = { version = "4.4", features = ["derive", "cargo", "wrap_help"] }
+clap = { version = "4.4", features = ["derive", "cargo", "wrap_help", "env"] }
 clap-verbosity-flag = "2.0"
 anstream = "0.5"
 owo-colors = "3.5"
