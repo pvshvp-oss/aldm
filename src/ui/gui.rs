@@ -1,7 +1,7 @@
 pub struct Gui {}
 
 impl RunApp for Gui {
-    fn run_app() -> Result<Vec<WorkerGuard>, crate::Error> {
+    fn run_app() -> Result<Box<dyn Any>, crate::Error> {
         todo!();
     }
 }
@@ -21,6 +21,6 @@ pub enum Error {
 use crate::app::logging::InitLog;
 use crate::app::RunApp;
 use snafu::Snafu;
-use tracing_appender::non_blocking::WorkerGuard;
+use std::any::Any;
 
 // endregion: IMPORTS

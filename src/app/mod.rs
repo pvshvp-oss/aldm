@@ -3,7 +3,7 @@ lazy_static! {
 }
 
 pub trait RunApp {
-    fn run_app() -> Result<Vec<WorkerGuard>, crate::Error>;
+    fn run_app() -> Result<Box<dyn Any>, crate::Error>;
 }
 
 #[derive(Debug, Snafu)]
@@ -22,6 +22,7 @@ pub enum Error {
 
 use lazy_static::lazy_static;
 use snafu::Snafu;
+use std::any::Any;
 
 // endregion: IMPORTS
 
