@@ -26,6 +26,8 @@ impl RunApp for Cli {
         tracing::info!("This is {}", "info!".color(AnsiColors::Green));
         tracing::warn!("This is {}", "warn!".color(AnsiColors::Yellow));
         tracing::error!("This is {}", "error!".color(AnsiColors::Red));
+        let a = "{}";
+        tracing::info!(target:"JSON", "This is JSON: {}", a);
 
         Ok(Some(Box::new(_worker_guards)))
     }
