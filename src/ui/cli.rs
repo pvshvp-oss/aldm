@@ -1,28 +1,34 @@
-pub struct Cli {}
-
 pub fn run_cli() -> Result<Option<Box<dyn Any>>, crate::Error> {
+    config::init_config()
+        .context(app::ConfigSnafu {})
+        .context(crate::AppSnafu)?;
+
     let cli_input = CliTemplate::parse();
-    if cli_input.is_uncolored() {
+    let global_args = &cli_input.global_arguments;
+    if global_args.is_uncolored() {
         anstream::ColorChoice::Never.write_global();
         owo_colors::set_override(false);
     }
-    let mut handle = logging::init_log(cli_input.verbosity_filter())
+    let mut handle = logging::init_log(global_args.verbosity_filter())
         .context(app::LoggingSnafu {})
-        .context(AppSnafu {})?;
+        .context(crate::AppSnafu {})?;
 
-    if cli_input.is_json() {
+    if global_args.is_json() {
         _ = handle
             .switch_to_json()
             .context(app::LoggingSnafu {})
-            .context(AppSnafu {})?;
+            .context(crate::AppSnafu {})?;
     }
 
     tracing::info!("{:#?}", cli_input);
-    tracing::trace!("This is {}", "trace!".color(AnsiColors::Magenta));
-    tracing::debug!("This is {}", "debug!".color(AnsiColors::Blue));
-    tracing::info!("This is {}", "info!".color(AnsiColors::Green));
-    tracing::warn!("This is {}", "warn!".color(AnsiColors::Yellow));
-    tracing::error!("This is {}", "error!".color(AnsiColors::Red));
+    tracing::trace!(
+        "This is {}",
+        "trace!".color(owo_colors::AnsiColors::Magenta)
+    );
+    tracing::debug!("This is {}", "debug!".color(owo_colors::AnsiColors::Blue));
+    tracing::info!("This is {}", "info!".color(owo_colors::AnsiColors::Green));
+    tracing::warn!("This is {}", "warn!".color(owo_colors::AnsiColors::Yellow));
+    tracing::error!("This is {}", "error!".color(owo_colors::AnsiColors::Red));
     tracing::info!(target:"JSON", "This is JSON: {}", "{\"key\": \"value\"}");
 
     Ok(Some(Box::new(handle.worker_guards)))
@@ -37,28 +43,17 @@ pub trait CliModifier {
     fn is_json(&self) -> bool;
 }
 
-impl CliModifier for CliTemplate {
+impl CliModifier for GlobalArgs {
     fn verbosity_filter(&self) -> Option<LevelFilter> {
-        if self
-            .global_arguments
-            .plain_flag
-            || self
-                .global_arguments
-                .json_flag
-        {
+        if self.plain_flag || self.json_flag {
             return Some(LevelFilter::INFO);
         }
 
         let verbosity_flag_filter = self
-            .global_arguments
             .verbose
             .log_level_filter();
 
-        if verbosity_flag_filter < clap_verbosity_flag::LevelFilter::Debug
-            && self
-                .global_arguments
-                .debug_flag
-        {
+        if verbosity_flag_filter < clap_verbosity_flag::LevelFilter::Debug && self.debug_flag {
             return Some(LevelFilter::DEBUG);
         }
 
@@ -69,24 +64,18 @@ impl CliModifier for CliTemplate {
     }
 
     fn is_uncolored(&self) -> bool {
-        self.global_arguments
-            .plain_flag
-            || self
-                .global_arguments
-                .json_flag
-            || self
-                .global_arguments
-                .no_color_flag
+        self.plain_flag
+            || self.json_flag
+            || self.no_color_flag
             || env::var(format!(
                 "{}_NO_COLOR",
-                String::from(*APP_NAME).to_uppercase()
+                String::from(*app::APP_NAME).to_uppercase()
             ))
             .map_or(false, |value| !value.is_empty())
     }
 
     fn is_json(&self) -> bool {
-        self.global_arguments
-            .json_flag
+        self.json_flag
     }
 }
 
@@ -100,12 +89,9 @@ pub enum Error {
 
 // region: IMPORTS
 
-use crate::{
-    app::{self, logging, APP_NAME},
-    AppSnafu,
-};
+use crate::app::{self, config, logging};
 use clap::Parser;
-use owo_colors::{AnsiColors, OwoColorize};
+use owo_colors::OwoColorize;
 use snafu::{ResultExt, Snafu};
 use std::{any::Any, env};
 use tracing_subscriber::filter::LevelFilter;
@@ -119,7 +105,7 @@ mod cli_template {
     #[command(version, author, about, args_conflicts_with_subcommands = true)]
     pub struct CliTemplate {
         #[clap(flatten)]
-        pub global_arguments: GlobalArguments,
+        pub global_arguments: GlobalArgs,
 
         #[clap(subcommand)]
         pub command: Option<ActionCommand>,
@@ -128,9 +114,9 @@ mod cli_template {
         pub arguments: ListActionArguments,
     }
 
-    #[derive(Debug, Args)]
+    #[derive(Clone, Debug, Args)]
     #[clap(args_conflicts_with_subcommands = true, next_display_order = usize::MAX - 100)]
-    pub struct GlobalArguments {
+    pub struct GlobalArgs {
         #[clap(
             long = "config",
             short = 'c',
