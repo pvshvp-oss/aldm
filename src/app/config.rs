@@ -5,7 +5,7 @@ pub trait Config {}
 pub enum Error {
     #[non_exhaustive]
     #[snafu(display(""), visibility(pub))]
-    Dummy {},
+    ConfigDummy {},
 }
 
 // region: IMPORTS

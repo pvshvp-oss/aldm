@@ -13,7 +13,7 @@ impl InitLog for Gui {}
 pub enum Error {
     #[non_exhaustive]
     #[snafu(display(""), visibility(pub))]
-    Dummy {},
+    GuiDummy {},
 }
 
 // region: IMPORTS

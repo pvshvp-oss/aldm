@@ -99,7 +99,7 @@ impl CliModifier for CliTemplate {
 pub enum Error {
     #[non_exhaustive]
     #[snafu(display(""), visibility(pub))]
-    Dummy {},
+    CliDummy {},
 }
 
 // region: IMPORTS

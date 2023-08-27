@@ -3,7 +3,7 @@
 pub enum Error {
     #[non_exhaustive]
     #[snafu(display(""))]
-    Dummy {},
+    DataDummy {},
 }
 
 // region: IMPORTS
