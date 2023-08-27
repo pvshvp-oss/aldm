@@ -4,21 +4,24 @@ impl RunApp for Cli {
     fn run_app() -> Result<Option<Box<dyn Any>>, crate::Error> {
         let cli_input = CliTemplate::parse();
 
-        if cli_input
-            .global_arguments
-            .is_uncolored()
-        {
+        if cli_input.is_uncolored() {
             anstream::ColorChoice::Never.write_global();
             owo_colors::set_override(false);
         }
 
-        let _worker_guards = Cli::init_log(
-            cli_input
-                .global_arguments
-                .verbosity_filter(),
-        )
-        .context(LoggingSnafu {})
-        .context(AppSnafu {})?;
+        let handle = Cli::init_log(cli_input.verbosity_filter())
+            .context(LoggingSnafu {})
+            .context(AppSnafu {})?;
+
+        if cli_input.is_json() {
+            handle
+                .stdout_filter_handle
+                .modify(
+                    |filter: &mut FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>>| {
+                        *filter = filter_fn(Cli::stdout_json_filter_fn())
+                    },
+                );
+        }
 
         tracing::info!("{:#?}", cli_input);
         tracing::trace!("This is {}", "trace!".color(AnsiColors::Magenta));
@@ -29,7 +32,7 @@ impl RunApp for Cli {
         let a = "{}";
         tracing::info!(target:"JSON", "This is JSON: {}", a);
 
-        Ok(Some(Box::new(_worker_guards)))
+        Ok(Some(Box::new(handle.worker_guards)))
     }
 }
 
@@ -44,17 +47,28 @@ pub trait CliModifier {
     fn is_json(&self) -> bool;
 }
 
-impl CliModifier for GlobalArguments {
+impl CliModifier for CliTemplate {
     fn verbosity_filter(&self) -> Option<LevelFilter> {
-        if self.plain_flag || self.json_flag {
+        if self
+            .global_arguments
+            .plain_flag
+            || self
+                .global_arguments
+                .json_flag
+        {
             return Some(LevelFilter::INFO);
         }
 
         let verbosity_flag_filter = self
+            .global_arguments
             .verbose
             .log_level_filter();
 
-        if verbosity_flag_filter < clap_verbosity_flag::LevelFilter::Debug && self.debug_flag {
+        if verbosity_flag_filter < clap_verbosity_flag::LevelFilter::Debug
+            && self
+                .global_arguments
+                .debug_flag
+        {
             return Some(LevelFilter::DEBUG);
         }
 
@@ -65,9 +79,14 @@ impl CliModifier for GlobalArguments {
     }
 
     fn is_uncolored(&self) -> bool {
-        self.plain_flag
-            || self.json_flag
-            || self.no_color_flag
+        self.global_arguments
+            .plain_flag
+            || self
+                .global_arguments
+                .json_flag
+            || self
+                .global_arguments
+                .no_color_flag
             || env::var(format!(
                 "{}_NO_COLOR",
                 String::from(*APP_NAME).to_uppercase()
@@ -76,7 +95,8 @@ impl CliModifier for GlobalArguments {
     }
 
     fn is_json(&self) -> bool {
-        self.json_flag
+        self.global_arguments
+            .json_flag
     }
 }
 
@@ -93,13 +113,14 @@ pub enum Error {
 use crate::{
     app::{logging::InitLog, LoggingSnafu, RunApp},
     cli::cli_template::CliTemplate,
-    AppSnafu, APP_NAME,
+    AppSnafu, Handle, APP_NAME,
 };
 use clap::Parser;
 use owo_colors::{AnsiColors, OwoColorize};
 use snafu::{ResultExt, Snafu};
 use std::{any::Any, env};
-use tracing_subscriber::filter::LevelFilter;
+use tracing::Metadata;
+use tracing_subscriber::filter::{filter_fn, FilterFn, LevelFilter};
 
 use self::cli_template::GlobalArguments;
 
