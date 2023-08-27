@@ -28,16 +28,18 @@ tracing = "0.1"
 tracing-appender = "0.2"
 tracing-subscriber = "0.3"
 
-# Configuration
-lazy_static = "1.4"
+# Filesystem
 xdg = "2.5"
+permissions = "0.4"
 
 # Error handling
 snafu = "0.7"
 
 # Data
+lazy_static = "1.4"
 serde = { version = "1.0", features = ["derive"] }
 serde-aux = "4.2.0"
+serde_yaml = "0.9"
 speedy = "0.8"
 
 # Internatinalization

@@ -2,6 +2,14 @@ lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
 
+pub fn first_valid_path<'a>(
+    paths: &'a Vec<impl AsRef<Path> + 'a>,
+) -> Option<impl AsRef<Path> + 'a> {
+    paths
+        .iter()
+        .find(|p| p.as_ref().exists() && permissions::is_readable(p).is_ok())
+}
+
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
 pub enum Error {
@@ -31,6 +39,7 @@ pub enum Error {
 
 use lazy_static::lazy_static;
 use snafu::Snafu;
+use std::path::Path;
 
 // endregion: IMPORTS
 

@@ -1,11 +1,18 @@
 pub fn init_log(log_level_filter: Option<LevelFilter>) -> Result<Handle, Error> {
     // Setup the log directory and log file(s)
-    let log_dir_path = xdg::BaseDirectories::with_prefix(*APP_NAME)
-        .context(BaseDirectoriesSnafu {})?
+    let xdg_app_dirs = xdg::BaseDirectories::with_prefix(*app::APP_NAME)
+        .context(RetreiveLoggingUserAppBaseDirectoriesSnafu {})?;
+    let log_dir_path = xdg_app_dirs
         .create_state_directory("")
-        .context(LogDirectorySnafu {})?; // Setup the log directory
+        .context(CreateLogDirectorySnafu {
+            path: {
+                let mut state_dir_path = xdg_app_dirs.get_state_home();
+                state_dir_path.push(*app::APP_NAME);
+                state_dir_path
+            },
+        })?; // Setup the log directory
     let log_file_appender =
-        tracing_appender::rolling::hourly(log_dir_path, format!("{}.log", *APP_NAME)); // Setup the log file
+        tracing_appender::rolling::hourly(log_dir_path, format!("{}.log", *app::APP_NAME)); // Setup the log file
 
     // Obtain writers to various logging destinations and worker guards (for keeping the streams alive)
     let (non_blocking_file_writer, _file_writer_guard) =
@@ -78,7 +85,8 @@ pub fn init_log(log_level_filter: Option<LevelFilter>) -> Result<Handle, Error> 
         .with(log_file_layer)
         .with(stdout_layer)
         .with(stderr_layer);
-    tracing::subscriber::set_global_default(subscriber).context(GlobalDefaultSubscriberSnafu {})?;
+    tracing::subscriber::set_global_default(subscriber)
+        .context(SetGlobalDefaultSubscriberSnafu {})?;
 
     Ok(Handle {
         _switch_to_json_inner: Some(Box::new(switch_to_json)),
@@ -101,7 +109,7 @@ impl Handle {
             ._switch_to_json_inner
             .take()
             .unwrap())()
-        .context(JsonSwitchSnafu {})?)
+        .context(SwitchToJsonSnafu {})?)
     }
 }
 
@@ -110,24 +118,27 @@ impl Handle {
 pub enum Error {
     #[non_exhaustive]
     #[snafu(
-        display("could not retreive XDG base directories': {source}"),
+        display("could not retreive the XDG base directories for the user: {source}"),
         visibility(pub)
     )]
-    BaseDirectories { source: xdg::BaseDirectoriesError },
+    RetreiveLoggingUserAppBaseDirectories { source: xdg::BaseDirectoriesError },
 
     #[non_exhaustive]
     #[snafu(
-        display("could not create the log directory: {source}"),
+        display("could not create the log directory at {:?}: {source}", path),
         visibility(pub)
     )]
-    LogDirectory { source: std::io::Error },
+    CreateLogDirectory {
+        path: PathBuf,
+        source: std::io::Error,
+    },
 
     #[non_exhaustive]
     #[snafu(
         display("could not set the global default tracing subscriber: {source}"),
         visibility(pub)
     )]
-    GlobalDefaultSubscriber {
+    SetGlobalDefaultSubscriber {
         source: tracing::subscriber::SetGlobalDefaultError,
     },
 
@@ -136,14 +147,16 @@ pub enum Error {
         display("could not switch to JSON output format: {source}"),
         visibility(pub)
     )]
-    JsonSwitch {
+    SwitchToJson {
         source: tracing_subscriber::reload::Error,
     },
 }
 
 // region: IMPORTS
 
-use crate::app::APP_NAME;
+use std::path::PathBuf;
+
+use crate::app;
 use snafu::{ResultExt, Snafu};
 use tracing::{Level, Metadata};
 use tracing_appender::non_blocking::WorkerGuard;
