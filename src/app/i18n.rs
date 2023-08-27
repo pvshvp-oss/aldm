@@ -1,11 +1,11 @@
-pub trait InitConfig {}
+pub trait InitI18n {}
 
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
     #[snafu(display(""), visibility(pub))]
-    ConfigDummy {},
+    I18nDummy {},
 }
 
 // region: IMPORTS

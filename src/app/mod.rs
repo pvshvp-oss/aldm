@@ -22,6 +22,13 @@ pub enum Error {
         #[snafu(backtrace)]
         source: config::Error,
     },
+
+    #[non_exhaustive]
+    #[snafu(display("in internationalization: {source}"), visibility(pub))]
+    Internationalization {
+        #[snafu(backtrace)]
+        source: i18n::Error,
+    },
 }
 
 // region: IMPORTS
@@ -35,6 +42,7 @@ use std::any::Any;
 // region: MODULES
 
 pub mod config;
+pub mod i18n;
 pub mod logging;
 
 // endregion: MODULES
@@ -42,6 +50,7 @@ pub mod logging;
 // region: RE-EXPORTS
 
 pub use config::*;
+pub use i18n::*;
 pub use logging::*;
 
 // endregion: RE-EXPORTS

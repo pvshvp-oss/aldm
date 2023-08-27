@@ -137,6 +137,15 @@ mod cli_template {
     #[clap(args_conflicts_with_subcommands = true, next_display_order = usize::MAX - 100)]
     pub struct GlobalArguments {
         #[clap(
+            long = "config",
+            short = 'c',
+            help = "Path to the configuration file to use.",
+            global = true,
+            display_order = usize::MAX - 5
+        )]
+        pub config_file: Option<PathBuf>,
+
+        #[clap(
             long = "json",
             help = "Output in the JSON format for machine readability and scripting purposes.",
             global = true,
