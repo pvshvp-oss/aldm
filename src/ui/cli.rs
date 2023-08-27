@@ -3,12 +3,10 @@ pub struct Cli {}
 impl RunApp for Cli {
     fn run_app() -> Result<Option<Box<dyn Any>>, crate::Error> {
         let cli_input = CliTemplate::parse();
-
         if cli_input.is_uncolored() {
             anstream::ColorChoice::Never.write_global();
             owo_colors::set_override(false);
         }
-
         let mut handle = Cli::init_log(cli_input.verbosity_filter())
             .context(LoggingSnafu {})
             .context(AppSnafu {})?;
@@ -26,8 +24,7 @@ impl RunApp for Cli {
         tracing::info!("This is {}", "info!".color(AnsiColors::Green));
         tracing::warn!("This is {}", "warn!".color(AnsiColors::Yellow));
         tracing::error!("This is {}", "error!".color(AnsiColors::Red));
-        let a = "{}";
-        tracing::info!(target:"JSON", "This is JSON: {}", a);
+        tracing::info!(target:"JSON", "This is JSON: {}", "{\"key\": \"value\"}");
 
         Ok(Some(Box::new(handle.worker_guards)))
     }
@@ -110,16 +107,13 @@ pub enum Error {
 use crate::{
     app::{logging::InitLog, LoggingSnafu, RunApp},
     cli::cli_template::CliTemplate,
-    AppSnafu, Handle, APP_NAME,
+    AppSnafu, APP_NAME,
 };
 use clap::Parser;
 use owo_colors::{AnsiColors, OwoColorize};
 use snafu::{ResultExt, Snafu};
 use std::{any::Any, env};
-use tracing::Metadata;
-use tracing_subscriber::filter::{filter_fn, FilterFn, LevelFilter};
-
-use self::cli_template::GlobalArguments;
+use tracing_subscriber::filter::LevelFilter;
 
 // endregion: IMPORTS
 
