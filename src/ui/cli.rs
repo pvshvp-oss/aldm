@@ -9,18 +9,12 @@ impl RunApp for Cli {
             owo_colors::set_override(false);
         }
 
-        let handle = Cli::init_log(cli_input.verbosity_filter())
+        let mut handle = Cli::init_log(cli_input.verbosity_filter())
             .context(LoggingSnafu {})
             .context(AppSnafu {})?;
 
         if cli_input.is_json() {
-            handle
-                .stdout_filter_handle
-                .modify(
-                    |filter: &mut FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>>| {
-                        *filter = filter_fn(Cli::stdout_json_filter_fn())
-                    },
-                );
+            handle.switch_to_json();
         }
 
         tracing::info!("{:#?}", cli_input);

@@ -20,22 +20,7 @@ pub trait InitLog {
         })
     }
 
-    fn init_log(
-        log_level_filter: Option<LevelFilter>,
-    ) -> Result<
-        Handle<
-            FilterFn<Box<dyn Fn(&Metadata) -> bool + core::marker::Send + core::marker::Sync>>,
-            Layered<
-                Filtered<
-                    fmt::Layer<Registry, Pretty, Format<Pretty>, NonBlocking>,
-                    LevelFilter,
-                    Registry,
-                >,
-                Registry,
-            >,
-        >,
-        Error,
-    > {
+    fn init_log(log_level_filter: Option<LevelFilter>) -> Result<Handle, Error> {
         let log_dir_path = xdg::BaseDirectories::with_prefix(*APP_NAME)
             .context(BaseDirectoriesSnafu {})?
             .create_state_directory("")
@@ -60,7 +45,6 @@ pub trait InitLog {
             .with_writer(non_blocking_file_writer)
             .with_filter(LevelFilter::TRACE);
         let stdout_filter = filter_fn(Self::stdout_filter_fn(log_level_filter));
-        let stdout_json_filter = filter_fn(Self::stdout_json_filter_fn());
         let (stdout_filter, stdout_filter_reload_handle) = reload::Layer::new(stdout_filter);
         let stdout_layer = fmt::Layer::new()
             .with_ansi(true)
@@ -87,14 +71,19 @@ pub trait InitLog {
         tracing::subscriber::set_global_default(subscriber)
             .context(GlobalDefaultSubscriberSnafu {})?;
 
-        // stdout_filter_reload_handle.modify(
-        //     |filter: &mut FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>>| {
-        //         *filter = stdout_json_filter
-        //     },
-        // );
-
         Ok(Handle {
-            stdout_filter_handle: stdout_filter_reload_handle,
+            switch_to_json_inner: Some(Box::new(move || {
+                {
+                    stdout_filter_reload_handle.modify(
+                        |filter: &mut FilterFn<
+                            Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>,
+                        >| {
+                            *filter = filter_fn(Self::stdout_json_filter_fn())
+                        },
+                    )
+                }
+                .unwrap()
+            })),
             worker_guards: vec![
                 _file_writer_guard,
                 _stdout_writer_guard,
@@ -104,9 +93,18 @@ pub trait InitLog {
     }
 }
 
-pub struct Handle<L, S> {
-    pub stdout_filter_handle: reload::Handle<L, S>,
+pub struct Handle {
+    pub switch_to_json_inner: Option<Box<dyn FnOnce() -> ()>>,
     pub worker_guards: Vec<WorkerGuard>,
+}
+
+impl Handle {
+    pub fn switch_to_json(&mut self) {
+        (self
+            .switch_to_json_inner
+            .take()
+            .unwrap())()
+    }
 }
 
 #[derive(Debug, Snafu)]
@@ -141,15 +139,12 @@ pub enum Error {
 use crate::app::APP_NAME;
 use snafu::{ResultExt, Snafu};
 use tracing::{Level, Metadata};
-use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
+use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
-    filter::{filter_fn, FilterFn, Filtered, LevelFilter},
-    fmt::{
-        self,
-        format::{Format, Pretty},
-    },
-    layer::{Filter, Layered, SubscriberExt},
-    reload, Layer, Registry,
+    filter::{filter_fn, FilterFn, LevelFilter},
+    fmt::{self},
+    layer::SubscriberExt,
+    reload, Layer,
 };
 
 // endregion: IMPORTS
