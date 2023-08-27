@@ -14,7 +14,10 @@ impl RunApp for Cli {
             .context(AppSnafu {})?;
 
         if cli_input.is_json() {
-            handle.switch_to_json();
+            _ = handle
+                .switch_to_json()
+                .context(LoggingSnafu {})
+                .context(AppSnafu {})?;
         }
 
         tracing::info!("{:#?}", cli_input);
