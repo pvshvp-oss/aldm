@@ -1,5 +1,3 @@
-pub trait InitConfig {}
-
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
 pub enum Error {

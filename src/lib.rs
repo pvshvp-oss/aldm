@@ -1,5 +1,5 @@
-pub fn print_type_of<T>(_: &T) {
-    println!("{}", std::any::type_name::<T>())
+pub fn type_of<T>(_: &T) -> &str {
+    any::type_name::<T>()
 }
 
 #[derive(Debug, Snafu)]
@@ -29,6 +29,8 @@ pub enum Error {
 
 // region: IMPORTS
 
+use std::any;
+
 use snafu::Snafu;
 
 // endregion: IMPORTS
@@ -41,12 +43,3 @@ pub mod data;
 pub mod ui;
 
 // endregion: MODULES
-
-// region: RE-EXPORTS
-
-pub use actions::*;
-pub use app::*;
-pub use data::*;
-pub use ui::*;
-
-// endregion: RE-EXPORTS

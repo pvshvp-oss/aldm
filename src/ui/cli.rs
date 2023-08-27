@@ -1,36 +1,32 @@
 pub struct Cli {}
 
-impl RunApp for Cli {
-    fn run_app() -> Result<Option<Box<dyn Any>>, crate::Error> {
-        let cli_input = CliTemplate::parse();
-        if cli_input.is_uncolored() {
-            anstream::ColorChoice::Never.write_global();
-            owo_colors::set_override(false);
-        }
-        let mut handle = Cli::init_log(cli_input.verbosity_filter())
-            .context(LoggingSnafu {})
-            .context(AppSnafu {})?;
-
-        if cli_input.is_json() {
-            _ = handle
-                .switch_to_json()
-                .context(LoggingSnafu {})
-                .context(AppSnafu {})?;
-        }
-
-        tracing::info!("{:#?}", cli_input);
-        tracing::trace!("This is {}", "trace!".color(AnsiColors::Magenta));
-        tracing::debug!("This is {}", "debug!".color(AnsiColors::Blue));
-        tracing::info!("This is {}", "info!".color(AnsiColors::Green));
-        tracing::warn!("This is {}", "warn!".color(AnsiColors::Yellow));
-        tracing::error!("This is {}", "error!".color(AnsiColors::Red));
-        tracing::info!(target:"JSON", "This is JSON: {}", "{\"key\": \"value\"}");
-
-        Ok(Some(Box::new(handle.worker_guards)))
+pub fn run_cli() -> Result<Option<Box<dyn Any>>, crate::Error> {
+    let cli_input = CliTemplate::parse();
+    if cli_input.is_uncolored() {
+        anstream::ColorChoice::Never.write_global();
+        owo_colors::set_override(false);
     }
-}
+    let mut handle = logging::init_log(cli_input.verbosity_filter())
+        .context(app::LoggingSnafu {})
+        .context(AppSnafu {})?;
 
-impl InitLog for Cli {}
+    if cli_input.is_json() {
+        _ = handle
+            .switch_to_json()
+            .context(app::LoggingSnafu {})
+            .context(AppSnafu {})?;
+    }
+
+    tracing::info!("{:#?}", cli_input);
+    tracing::trace!("This is {}", "trace!".color(AnsiColors::Magenta));
+    tracing::debug!("This is {}", "debug!".color(AnsiColors::Blue));
+    tracing::info!("This is {}", "info!".color(AnsiColors::Green));
+    tracing::warn!("This is {}", "warn!".color(AnsiColors::Yellow));
+    tracing::error!("This is {}", "error!".color(AnsiColors::Red));
+    tracing::info!(target:"JSON", "This is JSON: {}", "{\"key\": \"value\"}");
+
+    Ok(Some(Box::new(handle.worker_guards)))
+}
 
 pub trait CliModifier {
     fn verbosity_filter(&self) -> Option<LevelFilter>;
@@ -105,9 +101,8 @@ pub enum Error {
 // region: IMPORTS
 
 use crate::{
-    app::{logging::InitLog, LoggingSnafu, RunApp},
-    cli::cli_template::CliTemplate,
-    AppSnafu, APP_NAME,
+    app::{self, logging, APP_NAME},
+    AppSnafu,
 };
 use clap::Parser;
 use owo_colors::{AnsiColors, OwoColorize};
@@ -344,4 +339,10 @@ mod cli_template {
     // endregion: IMPORTS
 }
 
-//endregion: MODULES
+// endregion: MODULES
+
+// region: RE-EXPORTS
+
+pub use cli_template::*;
+
+// endregion: RE-EXPORTS

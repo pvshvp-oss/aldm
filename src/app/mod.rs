@@ -2,10 +2,6 @@ lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
 
-pub trait RunApp {
-    fn run_app() -> Result<Option<Box<dyn Any>>, crate::Error>;
-}
-
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
 pub enum Error {
@@ -35,7 +31,6 @@ pub enum Error {
 
 use lazy_static::lazy_static;
 use snafu::Snafu;
-use std::any::Any;
 
 // endregion: IMPORTS
 
