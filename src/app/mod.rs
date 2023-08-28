@@ -2,12 +2,20 @@ lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
 
-pub fn first_valid_path<'a>(
+pub fn first_readable_valid_path<'a>(
     paths: &'a Vec<impl AsRef<Path> + 'a>,
 ) -> Option<impl AsRef<Path> + 'a> {
     paths
         .iter()
-        .find(|p| p.as_ref().exists() && permissions::is_readable(p).is_ok())
+        .find(|p| permissions::is_readable(p).unwrap_or(false))
+}
+
+pub fn first_writable_valid_path<'a>(
+    paths: &'a Vec<impl AsRef<Path> + 'a>,
+) -> Option<impl AsRef<Path> + 'a> {
+    paths
+        .iter()
+        .find(|p| permissions::is_writable(p).unwrap_or(false))
 }
 
 #[derive(Debug, Snafu)]

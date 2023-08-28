@@ -1,18 +1,34 @@
-pub fn init_log(log_level_filter: Option<LevelFilter>) -> Result<Handle, Error> {
+pub fn init_log(
+    preferred_log_dirpath: Option<PathBuf>,
+    log_level_filter: Option<LevelFilter>,
+) -> Result<(Handle, PathBuf), Error> {
     // Setup the log directory and log file(s)
-    let xdg_app_dirs = xdg::BaseDirectories::with_prefix(*app::APP_NAME)
-        .context(RetreiveLoggingUserAppBaseDirectoriesSnafu {})?;
-    let log_dir_path = xdg_app_dirs
-        .create_state_directory("")
-        .context(CreateLogDirectorySnafu {
-            path: {
-                let mut state_dir_path = xdg_app_dirs.get_state_home();
-                state_dir_path.push(*app::APP_NAME);
-                state_dir_path
-            },
-        })?; // Setup the log directory
+    let log_filename = format!("{}.log", *app::APP_NAME);
+    let obtain_fallback_log_dirpath = || {
+        let xdg_app_dirs = xdg::BaseDirectories::with_prefix(*app::APP_NAME)
+            .context(RetreiveLoggingUserAppBaseDirectoriesSnafu {})?;
+        xdg_app_dirs
+            .create_state_directory("")
+            .context(CreateLogDirectorySnafu {
+                path: {
+                    let mut state_dirpath = xdg_app_dirs.get_state_home();
+                    state_dirpath.push(*app::APP_NAME);
+                    state_dirpath
+                },
+            })
+    };
+    let log_dirpath = match preferred_log_dirpath {
+        Some(preferred_log_dirpath) => {
+            if permissions::is_writable(&preferred_log_dirpath).unwrap_or(false) {
+                preferred_log_dirpath
+            } else {
+                obtain_fallback_log_dirpath()?
+            }
+        }
+        None => obtain_fallback_log_dirpath()?,
+    };
     let log_file_appender =
-        tracing_appender::rolling::hourly(log_dir_path, format!("{}.log", *app::APP_NAME)); // Setup the log file
+        tracing_appender::rolling::daily(log_dirpath.clone(), log_filename.clone()); // Setup the log file
 
     // Obtain writers to various logging destinations and worker guards (for keeping the streams alive)
     let (non_blocking_file_writer, _file_writer_guard) =
@@ -88,14 +104,21 @@ pub fn init_log(log_level_filter: Option<LevelFilter>) -> Result<Handle, Error> 
     tracing::subscriber::set_global_default(subscriber)
         .context(SetGlobalDefaultSubscriberSnafu {})?;
 
-    Ok(Handle {
-        _switch_to_json_inner: Some(Box::new(switch_to_json)),
-        worker_guards: vec![
-            _file_writer_guard,
-            _stdout_writer_guard,
-            _stderr_writer_guard,
-        ],
-    })
+    Ok((
+        Handle {
+            _switch_to_json_inner: Some(Box::new(switch_to_json)),
+            worker_guards: vec![
+                _file_writer_guard,
+                _stdout_writer_guard,
+                _stderr_writer_guard,
+            ],
+        },
+        {
+            let mut log_filepath = PathBuf::from(log_dirpath);
+            log_filepath.push(log_filename + "*");
+            log_filepath
+        },
+    ))
 }
 
 pub struct Handle {

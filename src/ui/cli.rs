@@ -1,82 +1,14 @@
-pub fn run_cli() -> Result<Option<Box<dyn Any>>, crate::Error> {
-    config::init_config()
-        .context(app::ConfigSnafu {})
-        .context(crate::AppSnafu)?;
+pub fn run_cli() -> Result<Box<dyn any::Any>, crate::Error> {
+    let (_cli_input, _worker_guards) = ui::run_common::<CliTemplate>()?;
 
-    let cli_input = CliTemplate::parse();
-    let global_args = &cli_input.global_arguments;
-    if global_args.is_uncolored() {
-        anstream::ColorChoice::Never.write_global();
-        owo_colors::set_override(false);
-    }
-    let mut handle = logging::init_log(global_args.verbosity_filter())
-        .context(app::LoggingSnafu {})
-        .context(crate::AppSnafu {})?;
-
-    if global_args.is_json() {
-        _ = handle
-            .switch_to_json()
-            .context(app::LoggingSnafu {})
-            .context(crate::AppSnafu {})?;
-    }
-
-    tracing::info!("{:#?}", cli_input);
-    tracing::trace!(
-        "This is {}",
-        "trace!".color(owo_colors::AnsiColors::Magenta)
+    tracing::debug!(
+        "Running in {} mode...",
+        "CLI"
+            .italic()
+            .blue()
     );
-    tracing::debug!("This is {}", "debug!".color(owo_colors::AnsiColors::Blue));
-    tracing::info!("This is {}", "info!".color(owo_colors::AnsiColors::Green));
-    tracing::warn!("This is {}", "warn!".color(owo_colors::AnsiColors::Yellow));
-    tracing::error!("This is {}", "error!".color(owo_colors::AnsiColors::Red));
-    tracing::info!(target:"JSON", "This is JSON: {}", "{\"key\": \"value\"}");
 
-    Ok(Some(Box::new(handle.worker_guards)))
-}
-
-pub trait CliModifier {
-    fn verbosity_filter(&self) -> Option<LevelFilter>;
-    fn is_uncolored(&self) -> bool;
-    fn is_colored(&self) -> bool {
-        !self.is_uncolored()
-    }
-    fn is_json(&self) -> bool;
-}
-
-impl CliModifier for GlobalArgs {
-    fn verbosity_filter(&self) -> Option<LevelFilter> {
-        if self.plain_flag || self.json_flag {
-            return Some(LevelFilter::INFO);
-        }
-
-        let verbosity_flag_filter = self
-            .verbose
-            .log_level_filter();
-
-        if verbosity_flag_filter < clap_verbosity_flag::LevelFilter::Debug && self.debug_flag {
-            return Some(LevelFilter::DEBUG);
-        }
-
-        verbosity_flag_filter
-            .as_str()
-            .parse()
-            .ok()
-    }
-
-    fn is_uncolored(&self) -> bool {
-        self.plain_flag
-            || self.json_flag
-            || self.no_color_flag
-            || env::var(format!(
-                "{}_NO_COLOR",
-                String::from(*app::APP_NAME).to_uppercase()
-            ))
-            .map_or(false, |value| !value.is_empty())
-    }
-
-    fn is_json(&self) -> bool {
-        self.json_flag
-    }
+    Ok(Box::new(()))
 }
 
 #[derive(Debug, Snafu)]
@@ -88,13 +20,10 @@ pub enum Error {
 }
 
 // region: IMPORTS
-
-use crate::app::{self, config, logging};
-use clap::Parser;
+use crate::ui;
 use owo_colors::OwoColorize;
-use snafu::{ResultExt, Snafu};
-use std::{any::Any, env};
-use tracing_subscriber::filter::LevelFilter;
+use snafu::Snafu;
+use std::any;
 
 // endregion: IMPORTS
 
@@ -105,7 +34,7 @@ mod cli_template {
     #[command(version, author, about, args_conflicts_with_subcommands = true)]
     pub struct CliTemplate {
         #[clap(flatten)]
-        pub global_arguments: GlobalArgs,
+        pub global_args: GlobalArgs<clap_verbosity_flag::InfoLevel>,
 
         #[clap(subcommand)]
         pub command: Option<ActionCommand>,
@@ -114,52 +43,40 @@ mod cli_template {
         pub arguments: ListActionArguments,
     }
 
-    #[derive(Clone, Debug, Args)]
-    #[clap(args_conflicts_with_subcommands = true, next_display_order = usize::MAX - 100)]
-    pub struct GlobalArgs {
-        #[clap(
-            long = "config",
-            short = 'c',
-            help = "Path to the configuration file to use.",
-            global = true,
-            display_order = usize::MAX - 5
-        )]
-        pub config_file: Option<PathBuf>,
+    impl ui::GlobalArguments for CliTemplate {
+        type L = clap_verbosity_flag::InfoLevel;
 
-        #[clap(
-            long = "json",
-            help = "Output in the JSON format for machine readability and scripting purposes.",
-            global = true,
-            display_order = usize::MAX - 4
-        )]
-        pub json_flag: bool,
+        fn config_file(&self) -> &Option<PathBuf> {
+            &self
+                .global_args
+                .config_file
+        }
 
-        #[clap(
-            long = "plain",
-            help = "Output as plain text without extra information, for machine readability and scripting purposes.",
-            global = true,
-            display_order = usize::MAX - 3
-        )]
-        pub plain_flag: bool,
+        fn is_json(&self) -> bool {
+            self.global_args
+                .json_flag
+        }
 
-        #[clap(
-            long = "debug",
-            help = "Output debug messages.",
-            global = true,
-            display_order = usize::MAX - 2
-        )]
-        pub debug_flag: bool,
+        fn is_plain(&self) -> bool {
+            self.global_args
+                .plain_flag
+        }
 
-        #[clap(
-            long = "no-color",
-            help = "Disable output coloring.",
-            global = true,
-            display_order = usize::MAX - 1
-        )]
-        pub no_color_flag: bool,
+        fn is_debug(&self) -> bool {
+            self.global_args
+                .debug_flag
+        }
 
-        #[clap(flatten)]
-        pub verbose: Verbosity<InfoLevel>,
+        fn is_no_color(&self) -> bool {
+            self.global_args
+                .no_color_flag
+        }
+
+        fn verbosity(&self) -> &clap_verbosity_flag::Verbosity<Self::L> {
+            &self
+                .global_args
+                .verbose
+        }
     }
 
     #[derive(Debug, Subcommand)]
@@ -317,9 +234,11 @@ mod cli_template {
 
     // region: IMPORTS
 
-    use crate::data::HardwareKind;
+    use crate::{
+        data::HardwareKind,
+        ui::{self, GlobalArgs},
+    };
     use clap::{Args, Parser, Subcommand};
-    use clap_verbosity_flag::{InfoLevel, Verbosity};
     use std::path::PathBuf;
 
     // endregion: IMPORTS

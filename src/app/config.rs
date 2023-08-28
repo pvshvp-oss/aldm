@@ -1,4 +1,4 @@
-pub fn init_config() -> Result<Config, Error> {
+pub fn init_config() -> Result<(Config, PathBuf), Error> {
     let config_filename = format!("{}.conf", *app::APP_NAME);
     let xdg_app_dirs = xdg::BaseDirectories::with_prefix(*app::APP_NAME)
         .context(RetreiveConfigUserAppBaseDirectoriesSnafu {})?;
@@ -7,32 +7,33 @@ pub fn init_config() -> Result<Config, Error> {
         format!("/etc/{}", config_filename).into(),
         format!("/var/tmp/{}/{}", *app::APP_NAME, config_filename).into(),
     ];
-    let config_filepath = app::first_valid_path(&candidate_config_filepaths);
+    let config_filepath = app::first_readable_valid_path(&candidate_config_filepaths);
     let config_filepath = match config_filepath {
         Some(p) => p
             .as_ref()
             .to_owned(),
         None => xdg_app_dirs
-            .place_config_file(config_filename)
+            .place_config_file(&config_filename)
             .context(CreateConfigDirectorySnafu {
                 path: {
-                    let mut config_dir_path = xdg_app_dirs.get_config_home();
-                    config_dir_path.push(*app::APP_NAME);
-                    config_dir_path
+                    let mut config_dirpath = xdg_app_dirs.get_config_home();
+                    config_dirpath.push(*app::APP_NAME);
+                    config_dirpath
                 },
             })?,
     };
-    if config_filepath.exists() {
+    if permissions::is_readable(config_filepath.clone()).unwrap_or(false) {
         let config_file = fs::File::open(config_filepath.clone()).context(ReadConfigFileSnafu {
             path: config_filepath.clone(),
         })?;
-        Ok(
+        Ok((
             serde_yaml::from_reader(BufReader::new(config_file)).context(
                 ConfigFileFormatSnafu {
                     path: config_filepath.clone(),
                 },
             )?,
-        )
+            config_filepath,
+        ))
     } else {
         let config_file =
             fs::File::create(config_filepath.clone()).context(CreateConfigFileSnafu {
@@ -43,16 +44,24 @@ pub fn init_config() -> Result<Config, Error> {
         serde_yaml::to_writer(buf_writer, &default_config).context(WriteConfigFileSnafu {
             path: config_filepath.clone(),
         })?;
-        Ok(default_config)
+        Ok((default_config, config_filepath))
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Readable, Writable)]
-pub struct Config {}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Config {
+    pub log_directory: Option<String>,
+    pub log_level_filter: Option<log::LevelFilter>,
+    pub no_color: Option<bool>,
+}
 
 impl Default for Config {
     fn default() -> Self {
-        Config {}
+        Config {
+            log_directory: None,
+            log_level_filter: Some(log::LevelFilter::Info),
+            no_color: Some(false),
+        }
     }
 }
 
@@ -128,6 +137,5 @@ use std::{
 use crate::app;
 use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
-use speedy::{Readable, Writable};
 
 // endregion: IMPORTS
