@@ -2,10 +2,9 @@ pub fn run_cli() -> Result<Box<dyn any::Any>, crate::Error> {
     let (_cli_input, _worker_guards) = ui::run_common::<CliTemplate>()?;
 
     tracing::debug!(
-        "Running in {} mode...",
-        "CLI"
-            .italic()
-            .blue()
+        "Running in {} mode... {}",
+        "CLI".blue(),
+        console::Emoji("🔤", "")
     );
 
     Ok(Box::new(()))

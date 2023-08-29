@@ -3,7 +3,7 @@ name = "aldm"
 version = "0.0.1"
 edition = "2021"
 license = "MPL-2.0"
-authors = ["shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>"]
+authors = ["shivanandvp <shivanandvp.oss@gmail.com>"]
 readme = "README.md"
 repository = "https://gitlab.com/shivanandvp/aldm.git"
 description = "A driver manager for Arch Linux"
@@ -52,6 +52,7 @@ clap = { version = "4.4", features = ["derive", "cargo", "wrap_help", "env"] }
 clap-verbosity-flag = "2.0"
 anstream = "0.5"
 owo-colors = {version = "3.5", features = ["supports-colors"]}
+console = "0.15"
 
 # GUI
 relm4 = "0.6"

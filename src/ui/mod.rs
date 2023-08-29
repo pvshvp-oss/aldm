@@ -61,10 +61,17 @@ where
             .context(crate::AppSnafu {})?;
     }
 
-    tracing::info!(
+    // Welcome message
+    tracing::debug!(
         "{} - {}",
         "ALDM".bold(),
         "A Driver Manager for Arch Linux".magenta()
+    );
+    tracing::debug!(
+        "{}  {} {}",
+        console::Emoji("✉️", ""),
+        "shivanandvp".italic(),
+        "<shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>".italic()
     );
     tracing::debug!(
         target:"TEST", "{}{}{}{}{}{}{}{}",
@@ -89,24 +96,46 @@ where
         "███".bright_white()
     );
     // Test messages
-    tracing::trace!(target:"TEST", "Testing trace!");
-    tracing::debug!(target:"TEST", "Testing debug!");
-    tracing::info!(target:"TEST", "Testing info!");
-    tracing::warn!(target:"TEST", "Testing warn!");
-    tracing::error!(target:"TEST", "Testing error!");
-    tracing::info!(target:"JSON", "Testing: {}", "{\"JSON\": \"Target\"}");
-    tracing::info!(target:"PLAIN", "Testing: Plain Target");
+    tracing::trace!(target:"TEST", "{} Testing trace!...", console::Emoji("🧪", ""));
+    tracing::debug!(target:"TEST", "{} Testing debug!...", console::Emoji("🧪", ""));
+    tracing::info!(target:"TEST", "{} Testing info!...", console::Emoji("🧪", ""));
+    tracing::warn!(target:"TEST", "{} Testing warn!...", console::Emoji("🧪", ""));
+    tracing::error!(target:"TEST", "{} Testing error!...", console::Emoji("🧪", ""));
+
+    tracing::info!(target:"JSON", "{} Testing: {}", console::Emoji("🧪", ""), "{\"JSON\": \"Target\"}");
+    tracing::info!(target:"PLAIN", "{} Testing: Plain Target", console::Emoji("🧪", ""));
+
     tracing::debug!(
-        "The {} is {} and {} has {}...",
+        "{}  The {} is {}... {}",
+        console::Emoji("⚙️", ""),
         "configuration".cyan(),
         "loaded".green(),
-        "logging".cyan(),
-        "begun".green()
+        console::Emoji("✅", ""),
     );
-    tracing::debug!("{} {:?}", "Config Filepath: ".magenta(), config_filepath);
-    tracing::debug!("{} {:?}", "Log Filepath: ".magenta(), log_filepath);
+    tracing::debug!(
+        "{} The {} has {}... {}",
+        console::Emoji("📝", ""),
+        "logging".cyan(),
+        "begun".green(),
+        console::Emoji("✅", ""),
+    );
+
+    tracing::debug!(
+        "{} {} {:?}",
+        console::Emoji("📂", ""),
+        "Config Filepath: ".magenta(),
+        config_filepath
+    );
+    tracing::debug!(
+        "{} {} {:?}",
+        console::Emoji("📂", ""),
+        "Log Filepath: ".magenta(),
+        log_filepath
+    );
+
     tracing::trace!(
-        "{} {:#?}",
+        "{}  {} {:#?}",
+        console::Emoji("⌨️", ""),
         "CLI input arguments:"
             .magenta()
             .dimmed(),

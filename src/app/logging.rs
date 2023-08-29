@@ -20,11 +20,11 @@ pub fn init_log(
     // Declare filtering rules for various logging destinations
     // In Regular mode, for stdout, permit messages of equal or lower verbosity
     // than the given filter level, permit messages of higher verbosity than
-    // 'WARN', and omit JSON target, and TEST target, (but not omit PLAIN
-    // target) messages.
+    // 'WARN', and omit PLAIN target, JSON target, and TEST target.
     let filter_stdout_regular = move |metadata: &Metadata<'_>| {
         metadata.level() <= &log_level_filter
             && metadata.level() > &Level::WARN
+            && metadata.target() != "PLAIN"
             && metadata.target() != "JSON"
             && metadata.target() != "TEST"
     };
