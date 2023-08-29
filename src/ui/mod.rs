@@ -43,19 +43,59 @@ where
         .context(app::LoggingSnafu {})
         .context(crate::AppSnafu {})?;
 
-    // Modify logging behavior if JSON output is desired
-    if CliModifier::is_json(&cli_input) {
+    // Modify logging behavior if Plain or Json output is desired
+    if cli_input.is_json() {
         _ = handle
             .switch_to_json()
             .context(app::LoggingSnafu {})
             .context(crate::AppSnafu {})?;
+    } else if cli_input.is_plain() {
+        _ = handle
+            .switch_to_plain()
+            .context(app::LoggingSnafu {})
+            .context(crate::AppSnafu {})?;
+    } else if cli_input.is_test() {
+        _ = handle
+            .switch_to_test()
+            .context(app::LoggingSnafu {})
+            .context(crate::AppSnafu {})?;
     }
 
-    tracing::debug!(
+    tracing::info!(
         "{} - {}",
         "ALDM".bold(),
         "A Driver Manager for Arch Linux".magenta()
     );
+    tracing::debug!(
+        target:"TEST", "{}{}{}{}{}{}{}{}",
+        "███".black(),
+        "███".red(),
+        "███".green(),
+        "███".yellow(),
+        "███".blue(),
+        "███".purple(),
+        "███".cyan(),
+        "███".white()
+    );
+    tracing::debug!(
+        target:"TEST", "{}{}{}{}{}{}{}{}",
+        "███".bright_black(),
+        "███".bright_red(),
+        "███".bright_green(),
+        "███".bright_yellow(),
+        "███".bright_blue(),
+        "███".bright_purple(),
+        "███".bright_cyan(),
+        "███".bright_white()
+    );
+    // Test messages
+    tracing::trace!(target:"TEST", "Testing trace!");
+    tracing::debug!(target:"TEST", "Testing debug!");
+    tracing::info!(target:"TEST", "Testing info!");
+    tracing::warn!(target:"TEST", "Testing warn!");
+    tracing::error!(target:"TEST", "Testing error!");
+    tracing::info!(target:"JSON", "Testing: {}", "{\"JSON\": \"Target\"}");
+    tracing::info!(target:"PLAIN", "Testing: Plain Target");
     tracing::debug!(
         "The {} is {} and {} has {}...",
         "configuration".cyan(),
@@ -67,17 +107,11 @@ where
     tracing::debug!("{} {:?}", "Log Filepath: ".magenta(), log_filepath);
     tracing::trace!(
         "{} {:#?}",
-        "CLI input arguments:".magenta(),
+        "CLI input arguments:"
+            .magenta()
+            .dimmed(),
         cli_input.dimmed()
     );
-
-    // Sample messages
-    tracing::trace!("Testing {} trace!", "magenta".magenta());
-    tracing::debug!("Testing {} debug!", "blue".blue());
-    tracing::info!("Testing {} info!", "green".green());
-    tracing::warn!("Testing {} warn!", "yellow".yellow());
-    tracing::error!("Testing {} error!", "red".red());
-    tracing::info!(target:"JSON", "Testing: {}", "{\"JSON\": \"output\"}");
 
     Ok((cli_input, handle.worker_guards))
 }
@@ -94,7 +128,7 @@ where
     <Self as GlobalArguments>::L: LogLevel,
 {
     fn verbosity_filter(&self) -> Option<LevelFilter> {
-        if self.is_plain() || GlobalArguments::is_json(self) {
+        if self.is_plain() || self.is_json() {
             return Some(LevelFilter::INFO);
         }
 
@@ -111,9 +145,10 @@ where
             .parse()
             .ok()
     }
+
     fn is_uncolored(&self) -> bool {
         self.is_plain()
-            || GlobalArguments::is_json(self)
+            || self.is_json()
             || self.is_no_color()
             || env::var(format!(
                 "{}_NO_COLOR",
@@ -121,11 +156,9 @@ where
             ))
             .map_or(false, |value| !value.is_empty())
     }
+
     fn is_colored(&self) -> bool {
         !self.is_uncolored()
-    }
-    fn is_json(&self) -> bool {
-        GlobalArguments::is_json(self)
     }
 }
 
@@ -141,6 +174,8 @@ pub trait GlobalArguments {
     fn is_debug(&self) -> bool;
 
     fn is_no_color(&self) -> bool;
+
+    fn is_test(&self) -> bool;
 
     fn verbosity(&self) -> &clap_verbosity_flag::Verbosity<Self::L>
     where
@@ -193,7 +228,7 @@ mod cli_template {
             short = 'c',
             help = "Path to the configuration file to use.",
             global = true,
-            display_order = usize::MAX - 5
+            display_order = usize::MAX - 6
         )]
         pub config_file: Option<PathBuf>,
 
@@ -201,7 +236,7 @@ mod cli_template {
             long = "json",
             help = "Output in the JSON format for machine readability and scripting purposes.",
             global = true,
-            display_order = usize::MAX - 4
+            display_order = usize::MAX - 5
         )]
         pub json_flag: bool,
 
@@ -209,7 +244,7 @@ mod cli_template {
             long = "plain",
             help = "Output as plain text without extra information, for machine readability and scripting purposes.",
             global = true,
-            display_order = usize::MAX - 3
+            display_order = usize::MAX - 4
         )]
         pub plain_flag: bool,
 
@@ -217,7 +252,7 @@ mod cli_template {
             long = "debug",
             help = "Output debug messages.",
             global = true,
-            display_order = usize::MAX - 2
+            display_order = usize::MAX - 3
         )]
         pub debug_flag: bool,
 
@@ -225,9 +260,17 @@ mod cli_template {
             long = "no-color",
             help = "Disable output coloring.",
             global = true,
-            display_order = usize::MAX - 1
+            display_order = usize::MAX - 2
         )]
         pub no_color_flag: bool,
+
+        #[clap(
+            long = "test",
+            help = "Avoid destructive modifications and show all output subject to the commandline filters. Useful for dry-runs and for developers.",
+            global = true,
+            display_order = usize::MAX - 1
+        )]
+        pub test_flag: bool,
 
         #[clap(flatten)]
         pub verbose: Verbosity<L>,

@@ -5,7 +5,7 @@
 PACKAGE_NAME_STUB="aldm"
 provides=("$PACKAGE_NAME_STUB")
 depends=('pacman' 'pciutils' 'usbutils' 'gtk4')
-arch=('x86_64' 'aarch64')
+arch=('x86_64')
 pkgdesc='A driver manager for Arch Linux.'
 url="https://github.com/shivanandvp/$PACKAGE_NAME_STUB"
 license=('MPL-2.0') 

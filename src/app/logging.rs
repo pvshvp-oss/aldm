@@ -1,36 +1,15 @@
 pub fn init_log(
     preferred_log_dirpath: Option<PathBuf>,
-    log_level_filter: Option<LevelFilter>,
+    preferred_log_level_filter: Option<LevelFilter>,
 ) -> Result<(Handle, PathBuf), Error> {
-    // Setup the log directory and log file(s)
     let log_filename = format!("{}.log", *app::APP_NAME);
-    let obtain_fallback_log_dirpath = || {
-        let xdg_app_dirs = xdg::BaseDirectories::with_prefix(*app::APP_NAME)
-            .context(RetreiveLoggingUserAppBaseDirectoriesSnafu {})?;
-        xdg_app_dirs
-            .create_state_directory("")
-            .context(CreateLogDirectorySnafu {
-                path: {
-                    let mut state_dirpath = xdg_app_dirs.get_state_home();
-                    state_dirpath.push(*app::APP_NAME);
-                    state_dirpath
-                },
-            })
-    };
-    let log_dirpath = match preferred_log_dirpath {
-        Some(preferred_log_dirpath) => {
-            if permissions::is_writable(&preferred_log_dirpath).unwrap_or(false) {
-                preferred_log_dirpath
-            } else {
-                obtain_fallback_log_dirpath()?
-            }
-        }
-        None => obtain_fallback_log_dirpath()?,
-    };
+    let log_dirpath = obtain_log_dirpath(preferred_log_dirpath)?;
     let log_file_appender =
-        tracing_appender::rolling::daily(log_dirpath.clone(), log_filename.clone()); // Setup the log file
+        tracing_appender::rolling::daily(log_dirpath.clone(), log_filename.clone());
+    let log_level_filter = preferred_log_level_filter.unwrap_or(LevelFilter::INFO);
 
-    // Obtain writers to various logging destinations and worker guards (for keeping the streams alive)
+    // Obtain writers to various logging destinations and worker guards (for
+    // keeping the streams alive)
     let (non_blocking_file_writer, _file_writer_guard) =
         tracing_appender::non_blocking(log_file_appender);
     let (non_blocking_stdout_writer, _stdout_writer_guard) =
@@ -39,32 +18,95 @@ pub fn init_log(
         tracing_appender::non_blocking(anstream::stderr());
 
     // Declare filtering rules for various logging destinations
-    let filter_stdout = move |metadata: &Metadata<'_>| {
-        metadata.level() <= &log_level_filter.unwrap_or(LevelFilter::INFO)
+    // In Regular mode, for stdout, permit messages of equal or lower verbosity
+    // than the given filter level, permit messages of higher verbosity than
+    // 'WARN', and omit JSON target, and TEST target, (but not omit PLAIN
+    // target) messages.
+    let filter_stdout_regular = move |metadata: &Metadata<'_>| {
+        metadata.level() <= &log_level_filter
             && metadata.level() > &Level::WARN
-            && !metadata
-                .target()
-                .eq_ignore_ascii_case("JSON")
-    }; // Omit messages of higher verbosity than 'INFO', messages of equal or lower verbosity than 'WARN', and JSON target messages.
+            && metadata.target() != "JSON"
+            && metadata.target() != "TEST"
+    };
+    // In Test mode, for stdout, permit messages of equal or lower verbosity
+    // than the given filter level, permit messages of higher verbosity than
+    // 'WARN', and permit all target messages.
+    let filter_stdout_test = move |metadata: &Metadata<'_>| {
+        metadata.level() <= &log_level_filter && metadata.level() > &Level::WARN
+    };
+    // In Plain mode, for stdout, print only 'INFO' messages, and permit only PLAIN target messages.
+    let filter_stdout_plain = move |metadata: &Metadata<'_>| {
+        metadata.level() == &Level::INFO && metadata.target() == "PLAIN"
+    };
+    // In Json mode, for stdout, print only 'INFO' messages, and permit only JSON target messages.
     let filter_stdout_json = move |metadata: &Metadata<'_>| {
-        metadata.level() == &Level::INFO
-            && metadata
-                .target()
-                .eq_ignore_ascii_case("JSON")
-    }; // In JSON printing mode, print only 'INFO' messages, and permit JSON target messages.
-    let stdout_filter: FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>> =
-        filter_fn(Box::new(filter_stdout)); // Box the closure to allow for type match when switching between two similar closures.
+        metadata.level() == &Level::INFO && metadata.target() == "JSON"
+    };
+    // In Regular mode, for stderr, permit messages of equal or lower verbosity
+    // than 'WARN', and permit all targets except TEST.
+    let filter_stderr_regular = move |metadata: &Metadata<'_>| {
+        metadata.level() < &Level::INFO && metadata.target() != "TEST"
+    };
+    // In Test mode, for stderr, permit messages of equal or lower verbosity
+    // than 'WARN', and permit all targets.
+    let filter_stderr_test = move |metadata: &Metadata<'_>| metadata.level() < &Level::INFO;
+    // Box the closure to allow for type match when switching between two similar closures.
+    let stdout_regular_filter: FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>> =
+        filter_fn(Box::new(filter_stdout_regular));
+    // Box the closure to allow for type match when switching between two similar closures.
+    let stdout_test_filter: FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>> =
+        filter_fn(Box::new(filter_stdout_test));
+    // Box the closure to allow for type match when switching between two similar closures.
+    let stdout_plain_filter: FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>> =
+        filter_fn(Box::new(filter_stdout_plain));
+    // Box the closure to allow for type match when switching between two similar closures.
     let stdout_json_filter: FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>> =
-        filter_fn(Box::new(filter_stdout_json)); // Box the closure to allow for type match when switching between two similar closures.
-    let (stdout_filter, stdout_filter_reload_handle) = reload::Layer::new(stdout_filter); // Wrap the filter in reload::Layer and obtain handle to allow switching between filters.
+        filter_fn(Box::new(filter_stdout_json));
+    // Box the closure to allow for type match when switching between two similar closures.
+    let stderr_regular_filter: FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>> =
+        filter_fn(Box::new(filter_stderr_regular));
+    // Box the closure to allow for type match when switching between two similar closures.
+    let stderr_test_filter: FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>> =
+        filter_fn(Box::new(filter_stderr_test));
+    // Wrap the filter in reload::Layer and obtain handle to allow switching between filters.
+    let (stdout_filter, stdout_filter_reload_handle) = reload::Layer::new(stdout_regular_filter);
+    let (stderr_filter, stderr_filter_reload_handle) = reload::Layer::new(stderr_regular_filter);
 
-    // Closure to switch to JSON logging
-    let switch_to_json = move || {
-        stdout_filter_reload_handle.modify(
-            |filter: &mut FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>>| {
-                *filter = stdout_json_filter
-            },
-        )
+    // Closure to switch to non-standard logging for stdout, in json mode or plain mode
+    let switch_stdout = move |logging_mode: LoggingMode| match logging_mode {
+        LoggingMode::Test => stdout_filter_reload_handle
+            .modify(
+                |filter: &mut FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>>| {
+                    *filter = stdout_test_filter
+                },
+            )
+            .context(SwitchToTestSnafu {}),
+        LoggingMode::Plain => stdout_filter_reload_handle
+            .modify(
+                |filter: &mut FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>>| {
+                    *filter = stdout_plain_filter
+                },
+            )
+            .context(SwitchToPlainSnafu {}),
+        LoggingMode::Json => stdout_filter_reload_handle
+            .modify(
+                |filter: &mut FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>>| {
+                    *filter = stdout_json_filter
+                },
+            )
+            .context(SwitchToJsonSnafu {}),
+        LoggingMode::Regular => Ok(()),
+    };
+    // Closure to switch to non-standard logging for stderr, in json mode or plain mode
+    let switch_stderr = move |logging_mode: LoggingMode| match logging_mode {
+        LoggingMode::Test => stderr_filter_reload_handle
+            .modify(
+                |filter: &mut FilterFn<Box<dyn Fn(&Metadata<'_>) -> bool + Send + Sync>>| {
+                    *filter = stderr_test_filter
+                },
+            )
+            .context(SwitchToTestSnafu {}),
+        LoggingMode::Regular | LoggingMode::Plain | LoggingMode::Json => Ok(()),
     };
 
     // Declare logging formats for various logging destinations
@@ -94,7 +136,7 @@ pub fn init_log(
         .with_target(false)
         .without_time()
         .with_writer(non_blocking_stderr_writer)
-        .with_filter(LevelFilter::WARN);
+        .with_filter(stderr_filter);
 
     // Compose various filtered logging destination layers and set them to receive tracing messages
     let subscriber = tracing_subscriber::registry()
@@ -106,7 +148,8 @@ pub fn init_log(
 
     Ok((
         Handle {
-            _switch_to_json_inner: Some(Box::new(switch_to_json)),
+            _switch_stdout_inner: Some(Box::new(switch_stdout)),
+            _switch_stderr_inner: Some(Box::new(switch_stderr)),
             worker_guards: vec![
                 _file_writer_guard,
                 _stdout_writer_guard,
@@ -121,19 +164,88 @@ pub fn init_log(
     ))
 }
 
+fn obtain_log_dirpath(preferred_log_dirpath: Option<PathBuf>) -> Result<PathBuf, Error> {
+    let obtain_fallback_log_dirpath = || {
+        let xdg_app_dirs = xdg::BaseDirectories::with_prefix(*app::APP_NAME)
+            .context(RetreiveLoggingUserAppBaseDirectoriesSnafu {})?;
+        xdg_app_dirs
+            .create_state_directory("")
+            .context(CreateLogDirectorySnafu {
+                path: {
+                    let mut state_dirpath = xdg_app_dirs.get_state_home();
+                    state_dirpath.push(*app::APP_NAME);
+                    state_dirpath
+                },
+            })
+    };
+    Ok(match preferred_log_dirpath {
+        Some(preferred_log_dirpath) => {
+            if permissions::is_writable(&preferred_log_dirpath).unwrap_or(false) {
+                preferred_log_dirpath
+            } else {
+                obtain_fallback_log_dirpath()?
+            }
+        }
+        None => obtain_fallback_log_dirpath()?,
+    })
+}
+
 pub struct Handle {
-    _switch_to_json_inner: Option<Box<dyn FnOnce() -> Result<(), reload::Error>>>,
+    _switch_stdout_inner: Option<Box<dyn FnOnce(LoggingMode) -> Result<(), Error>>>,
+    _switch_stderr_inner: Option<Box<dyn FnOnce(LoggingMode) -> Result<(), Error>>>,
     pub worker_guards: Vec<WorkerGuard>,
 }
 
 impl Handle {
-    pub fn switch_to_json(&mut self) -> Result<(), Error> {
-        Ok((self
-            ._switch_to_json_inner
+    pub fn switch_to_test(&mut self) -> Result<(), Error> {
+        _ = self
+            ._switch_stdout_inner
             .take()
-            .unwrap())()
-        .context(SwitchToJsonSnafu {})?)
+            .map(|function_handle| function_handle(LoggingMode::Test))
+            .ok_or(Error::SwitchFnNotAssigned {})?;
+        _ = self
+            ._switch_stderr_inner
+            .take()
+            .map(|function_handle| function_handle(LoggingMode::Test))
+            .ok_or(Error::SwitchFnNotAssigned {})?;
+        Ok(())
     }
+
+    pub fn switch_to_plain(&mut self) -> Result<(), Error> {
+        _ = self
+            ._switch_stdout_inner
+            .take()
+            .map(|function_handle| function_handle(LoggingMode::Plain))
+            .ok_or(Error::SwitchFnNotAssigned {})?;
+        _ = self
+            ._switch_stderr_inner
+            .take()
+            .map(|function_handle| function_handle(LoggingMode::Plain))
+            .ok_or(Error::SwitchFnNotAssigned {})?;
+        Ok(())
+    }
+
+    pub fn switch_to_json(&mut self) -> Result<(), Error> {
+        _ = self
+            ._switch_stdout_inner
+            .take()
+            .map(|function_handle| function_handle(LoggingMode::Json))
+            .ok_or(Error::SwitchFnNotAssigned {})?;
+        _ = self
+            ._switch_stderr_inner
+            .take()
+            .map(|function_handle| function_handle(LoggingMode::Json))
+            .ok_or(Error::SwitchFnNotAssigned {})?;
+        Ok(())
+    }
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum LoggingMode {
+    Regular,
+    Test,
+    Plain,
+    Json,
 }
 
 #[derive(Debug, Snafu)]
@@ -167,12 +279,39 @@ pub enum Error {
 
     #[non_exhaustive]
     #[snafu(
-        display("could not switch to JSON output format: {source}"),
+        display("could not switch to the Test output format: {source}"),
+        visibility(pub)
+    )]
+    SwitchToTest {
+        source: tracing_subscriber::reload::Error,
+    },
+
+    #[non_exhaustive]
+    #[snafu(
+        display("could not switch to the Plain output format: {source}"),
+        visibility(pub)
+    )]
+    SwitchToPlain {
+        source: tracing_subscriber::reload::Error,
+    },
+
+    #[non_exhaustive]
+    #[snafu(
+        display("could not switch to the JSON output format: {source}"),
         visibility(pub)
     )]
     SwitchToJson {
         source: tracing_subscriber::reload::Error,
     },
+
+    #[non_exhaustive]
+    #[snafu(
+        display(
+            "The function/closure to switch the output mode has not been assigned. This is a bug."
+        ),
+        visibility(pub)
+    )]
+    SwitchFnNotAssigned {},
 }
 
 // region: IMPORTS
@@ -180,6 +319,7 @@ pub enum Error {
 use std::path::PathBuf;
 
 use crate::app;
+use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
 use tracing::{Level, Metadata};
 use tracing_appender::non_blocking::WorkerGuard;

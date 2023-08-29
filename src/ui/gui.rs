@@ -66,6 +66,11 @@ mod gui_cli_template {
                 .no_color_flag
         }
 
+        fn is_test(&self) -> bool {
+            self.global_args
+                .test_flag
+        }
+
         fn verbosity(&self) -> &clap_verbosity_flag::Verbosity<Self::L> {
             &self
                 .global_args
