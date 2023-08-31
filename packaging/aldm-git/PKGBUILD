@@ -8,7 +8,7 @@ pkgbase='aldm'
 pkgname=('aldm-cli-git' 'aldm-gui-git' 'aldm-db-git')
 arch=('x86_64')
 url="https://github.com/shivanandvp/aldm"
-makedepends=('git' 'cargo')
+makedepends=('git' 'cargo' 'gtk4' 'base-devel')
 source=("git+https://github.com/shivanandvp/aldm")
 sha256sums=('SKIP')
 
