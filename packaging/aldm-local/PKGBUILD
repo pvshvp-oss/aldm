@@ -2,49 +2,104 @@
 
 # Maintainer: shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>
 
-PACKAGE_NAME_STUB="aldm"
-provides=("$PACKAGE_NAME_STUB")
-depends=('pacman' 'pciutils' 'usbutils' 'gtk4')
-arch=('x86_64')
-pkgdesc='A driver manager for Arch Linux.'
-url="https://github.com/shivanandvp/$PACKAGE_NAME_STUB"
-license=('MPL-2.0') 
-
-# -------- # 
-# Specific #
-# -------- #
 PKGVER_STUB=0.0.1
-pkgver=0.0.1.2023_08_28T20_43_50_05_00
+pkgver=0.0.1.2023_08_31_01
 pkgrel=1
-pkgname="$PACKAGE_NAME_STUB-local"
-conflicts=("$PACKAGE_NAME_STUB" "$PACKAGE_NAME_STUB-git")
+pkgbase='aldm'
+pkgname=('aldm-cli-local' 'aldm-gui-local' 'aldm-db-local')
+arch=('x86_64')
+url="https://github.com/shivanandvp/aldm"
 makedepends=('cargo')
 source=()
 sha256sums=()
+
 prepare() {
     export PROJECT_DIRECTORY="$(dirname -- "$(dirname -- "$(dirname -- "$(pwd)")")")"
+    export RESOURCE_DIRECTORY="$PROJECT_DIRECTORY/packaging/resources"
+    export BUILD_DIRECTORY="$PROJECT_DIRECTORY/target"
 }
-pkgver() {
-    echo "$PKGVER_STUB.$(date -Is | tr '\:\-\+\;' '_')"
-}
-# -------- #
 
-RESOURCE_DIRECTORY="$PROJECT_DIRECTORY/packaging/resources"
-BUILD_DIRECTORY="$PROJECT_DIRECTORY/target"
-build() {   
-    (   cd "$PROJECT_DIRECTORY" \
-        && RUSTUP_TOOLCHAIN=stable \
+pkgver() {
+    echo "$PKGVER_STUB.$(date "+%Y_%m_%e_%H")"
+}
+
+build() {  
+    (   
+        cd "$PROJECT_DIRECTORY"
+
         cargo build \
             --release \
             --all-features \
-            --target-dir="target"
+            --target-dir="target" \
+
+        cargo run \
+            --bin="aldm-cli" \
+            -- \
+            generate-database
+            "$PROJECT_DIRECTORY/aldm-db/input-file.yaml"
+            "$PROJECT_DIRECTORY/target/database.db"
     )
 }
-package() {
+
+package_aldm-cli-local() {
+    pkgdesc='(CLI-only package) A driver manager for Arch Linux.'
+    provides=('aldm')
+    depends=('pacman' 'pciutils' 'usbutils')
+    license=('AGPL3' 'MPL2') 
+    conflicts=("aldm-cli" "aldm-cli-git" "aldm-gui" "aldm-gui-local" "aldm-gui-git")
+
     # To bypass makepkg's dependency check during build-time
-    optdepends+=("$PACKAGE_NAME_STUB-db")
-    install -Dm644 "$PROJECT_DIRECTORY/LICENSE" "$pkgdir/usr/share/licenses/$PACKAGE_NAME_STUB/LICENSE"
-    install -Dm755 "$PROJECT_DIRECTORY/target/release/$PACKAGE_NAME_STUB" "$pkgdir/usr/bin/$PACKAGE_NAME_STUB"
-    install -Dm755 "$PROJECT_DIRECTORY/target/release/$PACKAGE_NAME_STUB-gui" "$pkgdir/usr/bin/$PACKAGE_NAME_STUB-gui"
+    optdepends+=("aldm-db")
+
+    (   
+        cd "$PROJECT_DIRECTORY"
+
+        install -Dm644 "$PROJECT_DIRECTORY/aldm/LICENSE" "$pkgdir/usr/share/licenses/aldm/LICENSE"
+        install -Dm644 "$PROJECT_DIRECTORY/aldm-cli/LICENSE" "$pkgdir/usr/share/licenses/aldm-cli/LICENSE"
+
+        install -Dm755 "$PROJECT_DIRECTORY/target/release/aldm-cli" "$pkgdir/usr/bin/aldm-cli"
+        ln -s "/usr/bin/aldm-cli" "$pkgdir/usr/bin/aldm"
+    )
 }
 
+package_aldm-gui-local() {
+    pkgdesc='(CLI + GUI package) A driver manager for Arch Linux.'
+    provides=('aldm')
+    depends=('pacman' 'pciutils' 'usbutils' 'gtk4')
+    license=('AGPL3' 'MPL2')
+    conflicts=("aldm-gui" "aldm-gui-git" "aldm-cli" "aldm-cli-local" "aldm-cli-git")
+    
+    # To bypass makepkg's dependency check during build-time
+    optdepends+=("aldm-db")
+
+    (   
+        cd "$PROJECT_DIRECTORY"
+
+        install -Dm644 "$PROJECT_DIRECTORY/aldm/LICENSE" "$pkgdir/usr/share/licenses/aldm/LICENSE"
+        install -Dm644 "$PROJECT_DIRECTORY/aldm-cli/LICENSE" "$pkgdir/usr/share/licenses/aldm-cli/LICENSE"
+        install -Dm644 "$PROJECT_DIRECTORY/aldm-gui/LICENSE" "$pkgdir/usr/share/licenses/aldm-gui/LICENSE"
+
+        install -Dm755 "$PROJECT_DIRECTORY/target/release/aldm-cli" "$pkgdir/usr/bin/aldm-cli"
+        ln -s "/usr/bin/aldm-cli" "$pkgdir/usr/bin/aldm"
+        install -Dm755 "$PROJECT_DIRECTORY/target/release/aldm-gui" "$pkgdir/usr/bin/aldm-gui"        
+    )
+}
+
+package_aldm-db-local() {
+    pkgdesc='Database for the ALDM driver manager.'
+    provides=('aldm-db')
+    depends=()
+    license_=('Unlicense')
+    conflicts=("aldm-db" "aldm-db-git")
+
+    # To bypass makepkg's dependency check during build-time
+    optdepends+=("aldm")
+
+    (   
+        cd "$PROJECT_DIRECTORY"
+
+        install -Dm644 "$PROJECT_DIRECTORY/aldm-db/LICENSE" "$pkgdir/usr/share/licenses/aldm-db/LICENSE"
+
+        install -Dm644 "database.db" "$pkgdir/var/lib/aldm/database.db"
+    )
+}
