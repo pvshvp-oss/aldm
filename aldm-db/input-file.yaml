@@ -2,3 +2,111 @@
 
 version: "0.0.1"
 
+# =====
+setups:
+# =====
+
+- condition: nvidia_maxwell&lts_kernel
+  packages: nvidia-lts
+
+# =========
+conditions:
+# =========
+# Each condition consists of a map of different criteria. The outermost 
+# criteria within a single condition all have an AND relationship. In other
+# words, all the criteria must be satisfied for the condition to be satisfied
+# as a whole. However, the inner values have an OR relationship. An individual
+# criterion is satisfied when one of its constituents is present. 
+# An OR relation between criteria can be represented by using a whole new 
+# separate condition.
+
+- nvidia_maxwell:
+    vendor_id: []
+    pc_id: 
+
+# =========
+categories:
+# =========
+# The innermost group is similar to a collection of Arch Linux packages
+# that all have the same 'provides' field in their PKGBUILDs. It exists to
+# reuse the definition of a certain kind of driver. 
+# This tree is internally flattened into internally conficting innermost
+# groups, like 'graphics.nvidia_driver', 'graphics.opengl.mesa_driver', etc. 
+# from which one option can be selected. However, the groups do not conflict 
+# one another. So it is possible to install two mutually conflicting packages
+# (based on the above criterion) if one of those packages appears in a 
+# different group where it does not conflict with the other package. An example
+# of such a pair would be 'mesa' and 'nvidia' which conflict under 
+# `graphics.nvidia_driver`, but since `mesa` appears separately under 
+# 'graphics.opengl.mesa_driver' without the same conflict, it can be installed 
+# with 'nvidia' safely.
+# The inverse map is stored too, for tagging purposes.
+
+  graphics:
+    nvidia:
+      nvidia_driver:
+        - nvidia
+        - nvidia-lts
+        - nvidia-dkms
+        - nvidia-beta
+        - nvidia-open
+        - nvidia-open-dkms
+        - nvidia-470xx-dkms
+        - nvidia-390xx-dkms
+        - nvidia-340xx-dkms
+        - mesa
+      # nvidia_utils: nvidia-utils # Installed by the nvidia driver
+      lib32_nvidia_utils: lib32-nvidia-utils
+      nvidia_settings: nvidia-settings
+    mesa:
+      mesa_driver:
+        - mesa
+        - mesa-amber
+        - nvidia-utils
+        - amdgpu-pro-oglp
+      mesa_utils: mesa-utils
+      
+# ===
+tags:
+# ===
+# Each group name is automatically assumed to be a tag while searching.
+# Additional tags can be assigned below to either groups, or packages.
+# Hyphens or spaces specified in the commandline are replaced with underscores.
+# This tree is internally flattened to a map of tags to a list of packages.
+# The inverse map is stored too, for filtering drivers by tags 
+# (this also contains group names). Tags can either be supplied as preferred 
+# tags or exclusion tags. Tags supplied as preferred do not exclude drivers,
+# but only change their priority. Tags supplied for exclusion eliminate 
+# certain drivers.
+
+  proprietary|non_free: 
+    graphics.nvidia.nvidia_driver: 
+        - nvidia
+        - nvidia-lts
+        - nvidia-dkms
+        - nvidia-beta
+        - nvidia-470xx-dkms
+        - nvidia-390xx-dkms
+        - nvidia-340xx-dkms
+    mesa.mesa_driver: amdgpu-pro-oglp
+  open_source|free:
+    nvidia.nvidia_driver:
+        - nvidia-open
+        - nvidia-open-dkms
+        - mesa
+  opengl: graphics.mesa
+  "proprietary|non_free": 
+    graphics.nvidia.nvidia_driver: 
+        - nvidia
+        - nvidia-lts
+        - nvidia-dkms
+        - nvidia-beta
+        - nvidia-470xx-dkms
+        - nvidia-390xx-dkms
+        - nvidia-340xx-dkms
+    mesa.mesa_driver: amdgpu-pro-oglp
+  "open_source|free":
+    nvidia.nvidia_driver:
+        - nvidia-open
+        - nvidia-open-dkms
+        - mesa

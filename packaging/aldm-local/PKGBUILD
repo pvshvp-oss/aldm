@@ -3,7 +3,7 @@
 # Maintainer: shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>
 
 PKGVER_STUB=0.0.1
-pkgver=0.0.1.2023_08_31_02
+pkgver=0.0.1.2023_08_31_04
 pkgrel=1
 pkgbase='aldm'
 pkgname=('aldm-cli-local' 'aldm-gui-local' 'aldm-db-local')

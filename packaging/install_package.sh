@@ -26,10 +26,13 @@ fi
 
 if ls "$PACKAGE_DIRECTORY"/*.pkg.tar.* > /dev/null 2>&1;then
     set -o xtrace
-    sudo pacman -U "$@" "$PACKAGE_DIRECTORY"/*.pkg.tar.*
+    sudo pacman -U "$@" "$PACKAGE_DIRECTORY"/*gui*.pkg.tar.*
+    sudo pacman -U "$@" "$PACKAGE_DIRECTORY"/*db*.pkg.tar.*
     set +o xtrace
 else
     set -o xtrace
-    sh "$SCRIPT_DIRECTORY"/build_package.sh "$MODE" --install "$@"
+    sh "$SCRIPT_DIRECTORY"/build_package.sh "$MODE" "$@"
+    sudo pacman -U "$@" "$PACKAGE_DIRECTORY"/*gui*.pkg.tar.*
+    sudo pacman -U "$@" "$PACKAGE_DIRECTORY"/*db*.pkg.tar.*
     set +o xtrace
 fi
