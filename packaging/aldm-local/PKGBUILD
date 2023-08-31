@@ -3,7 +3,7 @@
 # Maintainer: shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>
 
 PKGVER_STUB=0.0.1
-pkgver=0.0.1.2023_08_31_01
+pkgver=0.0.1.2023_08_31_02
 pkgrel=1
 pkgbase='aldm'
 pkgname=('aldm-cli-local' 'aldm-gui-local' 'aldm-db-local')
@@ -35,7 +35,7 @@ build() {
         cargo run \
             --bin="aldm-cli" \
             -- \
-            generate-database
+            generate-database \
             "$PROJECT_DIRECTORY/aldm-db/input-file.yaml" \
             "$PROJECT_DIRECTORY/target/database.db"
     )
@@ -100,6 +100,6 @@ package_aldm-db-local() {
 
         install -Dm644 "$PROJECT_DIRECTORY/aldm-db/LICENSE" "$pkgdir/usr/share/licenses/aldm-db/LICENSE"
 
-        install -Dm644 "database.db" "$pkgdir/var/lib/aldm/database.db"
+        # install -Dm644 "database.db" "$pkgdir/var/lib/aldm/database.db"
     )
 }
