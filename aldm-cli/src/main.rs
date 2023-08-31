@@ -1,5 +1,5 @@
 fn main() -> process::ExitCode {
-    let return_value = cli::run_cli();
+    let return_value = aldm_cli::run_cli();
     match return_value {
         Ok(_) => process::ExitCode::from(0),
         Err(err_value) => {
@@ -16,7 +16,6 @@ fn main() -> process::ExitCode {
 
 // region: IMPORTS
 
-use aldm::ui::cli;
 use owo_colors::OwoColorize;
 use std::process;
 

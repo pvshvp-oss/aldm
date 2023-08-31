@@ -1,32 +1,34 @@
-[package]
-name = "aldm"
+[workspace]
+
+members = [
+    "aldm",
+    "aldm-cli",
+    "aldm-gui",
+]
+resolver = "2"
+
+[workspace.package]
+
 version = "0.0.1"
-edition = "2021"
-license = "MPL-2.0"
-authors = ["shivanandvp <shivanandvp.oss@gmail.com>"]
-readme = "README.md"
-repository = "https://gitlab.com/shivanandvp/aldm.git"
 description = "A driver manager for Arch Linux"
-# documentation = "https://docs.rs/aldm"
+repository = "https://github.com/shivanandvp/aldm.git"
+homepage = "https://github.com/shivanandvp/aldm"
+authors = ["shivanandvp <shivanandvp.oss@gmail.com>"]
 keywords = ["driver", "drivers", "hardware", "arch"]
-categories = ["command-line-utilities"]
 exclude = ["packaging/*", ".github/*", "*.code-workspace"]
-default-run = "aldm"
+categories = []
+documentation = "https://docs.rs/aldm"
+readme = "README.md"
+edition = "2021"
 
-[[bin]]
-name = "aldm"
-path = "src/aldm.rs"
+[workspace.dependencies]
 
-[[bin]]
-name = "aldm-gui"
-path = "src/aldm-gui.rs"
-
-[dependencies]
+aldm = { path = "aldm" }
 
 # Logging
 tracing = "0.1"
 tracing-appender = "0.2"
-tracing-subscriber = { version = "0.3", features = ["serde"] }
+tracing-subscriber = "0.3"
 
 # Filesystem
 xdg = "2.5"
@@ -38,22 +40,18 @@ snafu = "0.7"
 # Data
 lazy_static = "1.4"
 serde = { version = "1.0", features = ["derive"] }
-serde-aux = "4.2.0"
+serde-aux = "4.2"
 serde_yaml = "0.9"
 tracing-serde = "0.1"
 speedy = "0.8"
-log = { version = "0.4", features = ["serde"] }
+log = "0.4"
 
-# Internatinalization
+# Internationalization
 fluent = "0.16"
 
 # CLI
-clap = { version = "4.4", features = ["derive", "cargo", "wrap_help", "env"] }
+clap = { version = "4.4", features = ["derive", "wrap_help"] }
 clap-verbosity-flag = "2.0"
 anstream = "0.5"
-owo-colors = {version = "3.5", features = ["supports-colors"]}
+owo-colors = "3.5"
 console = "0.15"
-
-# GUI
-relm4 = "0.6"
-relm4-components = "0.6"

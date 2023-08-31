@@ -1,4 +1,4 @@
-pub fn run_gui() -> Result<(), crate::Error> {
+pub fn run_gui() -> Result<(), aldm::Error> {
     let (_cli_input, _worker_guards) = ui::run_common::<CliTemplate>()?;
 
     tracing::debug!(
@@ -20,7 +20,7 @@ pub enum Error {
 
 // region: IMPORTS
 
-use crate::ui;
+use aldm::ui;
 use owo_colors::OwoColorize;
 use snafu::Snafu;
 
@@ -80,7 +80,7 @@ mod gui_cli_template {
 
     use std::path::PathBuf;
 
-    use crate::ui;
+    use aldm::ui;
     use clap::Parser;
 
     // endregion: IMPORTS

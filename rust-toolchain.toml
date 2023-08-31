@@ -1,4 +1,2 @@
 [toolchain]
 channel = "stable"
-components = [ "rustc", "cargo", "rustfmt", "rust-std"]
-profile = "default"

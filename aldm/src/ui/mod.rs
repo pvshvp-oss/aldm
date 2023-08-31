@@ -95,7 +95,7 @@ where
         "███".bright_cyan(),
         "███".bright_white()
     );
-    
+
     // Test messages
     tracing::trace!(target:"TEST", "{} Testing trace!...", console::Emoji("🧪", ""));
     tracing::debug!(target:"TEST", "{} Testing debug!...", console::Emoji("🧪", ""));
@@ -216,18 +216,8 @@ pub trait GlobalArguments {
 #[non_exhaustive]
 pub enum Error {
     #[non_exhaustive]
-    #[snafu(display("in the CLI: {source}"), visibility(pub))]
-    Cli {
-        #[snafu(backtrace)]
-        source: cli::Error,
-    },
-
-    #[non_exhaustive]
-    #[snafu(display("in the GUI: {source}"), visibility(pub))]
-    Gui {
-        #[snafu(backtrace)]
-        source: gui::Error,
-    },
+    #[snafu(display(""))]
+    Dummy {},
 }
 
 // region: IMPORTS
@@ -314,9 +304,6 @@ mod cli_template {
 
     // endregion: IMPORTS
 }
-
-pub mod cli;
-pub mod gui;
 
 // endregion: MODULES
 

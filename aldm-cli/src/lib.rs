@@ -1,4 +1,4 @@
-pub fn run_cli() -> Result<(), crate::Error> {
+pub fn run_cli() -> Result<(), aldm::Error> {
     let (_cli_input, _worker_guards) = ui::run_common::<CliTemplate>()?;
 
     tracing::debug!(
@@ -19,7 +19,7 @@ pub enum Error {
 }
 
 // region: IMPORTS
-use crate::ui;
+use aldm::ui;
 use owo_colors::OwoColorize;
 use snafu::Snafu;
 
@@ -237,7 +237,7 @@ mod cli_template {
 
     // region: IMPORTS
 
-    use crate::{
+    use aldm::{
         data::HardwareKind,
         ui::{self, GlobalArgs},
     };
