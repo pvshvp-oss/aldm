@@ -29,9 +29,8 @@ pub enum Error {
 
 // region: IMPORTS
 
-use std::any;
-
 use snafu::Snafu;
+use std::any;
 
 // endregion: IMPORTS
 

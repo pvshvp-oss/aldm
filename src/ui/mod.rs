@@ -95,6 +95,7 @@ where
         "███".bright_cyan(),
         "███".bright_white()
     );
+    
     // Test messages
     tracing::trace!(target:"TEST", "{} Testing trace!...", console::Emoji("🧪", ""));
     tracing::debug!(target:"TEST", "{} Testing debug!...", console::Emoji("🧪", ""));

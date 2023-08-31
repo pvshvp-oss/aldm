@@ -198,43 +198,27 @@ pub struct Handle {
 
 impl Handle {
     pub fn switch_to_test(&mut self) -> Result<(), Error> {
-        _ = self
-            ._switch_stdout_inner
-            .take()
-            .map(|function_handle| function_handle(LoggingMode::Test))
-            .ok_or(Error::SwitchFnNotAssigned {})?;
-        _ = self
-            ._switch_stderr_inner
-            .take()
-            .map(|function_handle| function_handle(LoggingMode::Test))
-            .ok_or(Error::SwitchFnNotAssigned {})?;
-        Ok(())
+        self.switch_output_mode(LoggingMode::Test)
     }
 
     pub fn switch_to_plain(&mut self) -> Result<(), Error> {
-        _ = self
-            ._switch_stdout_inner
-            .take()
-            .map(|function_handle| function_handle(LoggingMode::Plain))
-            .ok_or(Error::SwitchFnNotAssigned {})?;
-        _ = self
-            ._switch_stderr_inner
-            .take()
-            .map(|function_handle| function_handle(LoggingMode::Plain))
-            .ok_or(Error::SwitchFnNotAssigned {})?;
-        Ok(())
+        self.switch_output_mode(LoggingMode::Plain)
     }
 
     pub fn switch_to_json(&mut self) -> Result<(), Error> {
+        self.switch_output_mode(LoggingMode::Json)
+    }
+
+    fn switch_output_mode(&mut self, logging_mode: LoggingMode) -> Result<(), Error> {
         _ = self
             ._switch_stdout_inner
             .take()
-            .map(|function_handle| function_handle(LoggingMode::Json))
+            .map(|function_handle| function_handle(logging_mode))
             .ok_or(Error::SwitchFnNotAssigned {})?;
         _ = self
             ._switch_stderr_inner
             .take()
-            .map(|function_handle| function_handle(LoggingMode::Json))
+            .map(|function_handle| function_handle(logging_mode))
             .ok_or(Error::SwitchFnNotAssigned {})?;
         Ok(())
     }

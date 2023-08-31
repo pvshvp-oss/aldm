@@ -1,4 +1,4 @@
-pub fn run_cli() -> Result<Box<dyn any::Any>, crate::Error> {
+pub fn run_cli() -> Result<(), crate::Error> {
     let (_cli_input, _worker_guards) = ui::run_common::<CliTemplate>()?;
 
     tracing::debug!(
@@ -7,7 +7,7 @@ pub fn run_cli() -> Result<Box<dyn any::Any>, crate::Error> {
         console::Emoji("🔤", "")
     );
 
-    Ok(Box::new(()))
+    Ok(())
 }
 
 #[derive(Debug, Snafu)]
@@ -22,7 +22,6 @@ pub enum Error {
 use crate::ui;
 use owo_colors::OwoColorize;
 use snafu::Snafu;
-use std::any;
 
 // endregion: IMPORTS
 

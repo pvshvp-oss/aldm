@@ -1,15 +1,15 @@
-fn main() -> ExitCode {
-    let return_value = cli::run_cli(); // Dispatch commandline argument handling to its own distinct module
+fn main() -> process::ExitCode {
+    let return_value = cli::run_cli();
     match return_value {
-        Ok(_ok_value) => ExitCode::from(0),
+        Ok(_) => process::ExitCode::from(0),
         Err(err_value) => {
-            eprintln!(
+            anstream::eprintln!(
                 "{} {err_value}",
                 "[ERROR]"
                     .bold()
                     .red()
             );
-            ExitCode::from(1)
+            process::ExitCode::from(1)
         }
     }
 }
@@ -17,8 +17,7 @@ fn main() -> ExitCode {
 // region: IMPORTS
 
 use aldm::ui::cli;
-use anstream::eprintln;
 use owo_colors::OwoColorize;
-use std::process::ExitCode;
+use std::process;
 
 // endregion: IMPORTS
