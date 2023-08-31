@@ -2,7 +2,6 @@
 
 # Maintainer: shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>
 
-PKGVER_STUB=0.0.1
 pkgver=0.0.1
 pkgrel=1
 pkgbase='aldm'
@@ -10,17 +9,17 @@ pkgname=('aldm-cli-git' 'aldm-gui-git' 'aldm-db-git')
 arch=('x86_64')
 url="https://github.com/shivanandvp/aldm"
 makedepends=('git' 'cargo')
-source=("git+https://github.com/shivanandvp/$PACKAGE_NAME_STUB")
+source=("git+https://github.com/shivanandvp/aldm")
 sha256sums=('SKIP')
 
 prepare() {
-    export PROJECT_DIRECTORY="${srcdir}/$PACKAGE_NAME_STUB"
+    export PROJECT_DIRECTORY="${srcdir}/aldm"
     export RESOURCE_DIRECTORY="$PROJECT_DIRECTORY/packaging/resources"
     export BUILD_DIRECTORY="$PROJECT_DIRECTORY/target"
 }
 
 pkgver() {
-    (   cd "${srcdir}/$PACKAGE_NAME_STUB"
+    (   cd "${srcdir}/aldm"
         set -o pipefail
         git describe --long 2>/dev/null | sed 's/\([^-]*-g\)/r\1/;s/-/./g' ||
         printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"

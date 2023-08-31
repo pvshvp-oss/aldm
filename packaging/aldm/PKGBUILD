@@ -13,13 +13,9 @@ source=("${url}/archive/refs/tags/v${pkgver}.tar.gz")
 sha256sums=('SKIP')
 
 prepare() {
-    export PROJECT_DIRECTORY="${srcdir}/$PACKAGE_NAME_STUB-${pkgver}"
+    export PROJECT_DIRECTORY="${srcdir}/aldm-${pkgver}"
     export RESOURCE_DIRECTORY="$PROJECT_DIRECTORY/packaging/resources"
     export BUILD_DIRECTORY="$PROJECT_DIRECTORY/target"
-}
-
-pkgver() {
-    echo "$PKGVER_STUB.$(date "+%Y_%m_%e_%H")"
 }
 
 build() {  
