@@ -36,7 +36,7 @@ build() {
             --bin="aldm-cli" \
             -- \
             generate-database
-            "$PROJECT_DIRECTORY/aldm-db/input-file.yaml"
+            "$PROJECT_DIRECTORY/aldm-db/input-file.yaml" \
             "$PROJECT_DIRECTORY/target/database.db"
     )
 }
