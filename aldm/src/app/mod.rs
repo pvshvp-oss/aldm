@@ -2,6 +2,34 @@ lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
 
+pub trait PathListPermissions<'a, P>: Iterator<Item = P> + Sized
+where
+    P: AsRef<Path> + 'a,
+{
+    fn first_readable_path(mut self) -> Option<P> {
+        self.find(|p| permissions::is_readable(p).unwrap_or(false))
+    }
+
+    fn first_writable_path(mut self) -> Option<P> {
+        self.find(|p| permissions::is_writable(p).unwrap_or(false))
+    }
+
+    fn all_readable_paths(self) -> iter::Filter<Self, fn(&P) -> bool> {
+        self.filter(|p| permissions::is_readable(p).unwrap_or(false))
+    }
+
+    fn all_writable_paths(self) -> iter::Filter<Self, fn(&P) -> bool> {
+        self.filter(|p| permissions::is_writable(p).unwrap_or(false))
+    }
+}
+
+impl<'a, T, P> PathListPermissions<'a, P> for T
+where
+    T: Iterator<Item = P>,
+    P: AsRef<Path> + 'a,
+{
+}
+
 pub fn first_readable_path<'a>(
     paths: &'a Vec<impl AsRef<Path> + 'a>,
 ) -> Option<impl AsRef<Path> + 'a> {
@@ -63,7 +91,7 @@ pub enum Error {
 
 use lazy_static::lazy_static;
 use snafu::Snafu;
-use std::path::Path;
+use std::{iter, path::Path};
 
 // endregion: IMPORTS
 

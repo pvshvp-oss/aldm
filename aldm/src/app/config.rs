@@ -7,10 +7,12 @@ pub fn init_config() -> Result<(Config, PathBuf), Error> {
         format!("/etc/{}", config_filename).into(),
         format!("/var/tmp/{}/{}", *app::APP_NAME, config_filename).into(),
     ];
-    let config_filepath = app::first_readable_path(&candidate_config_filepaths);
+    let config_filepath = candidate_config_filepaths
+        .iter()
+        .first_readable_path();
     let config_filepath = match config_filepath {
         Some(p) => p
-            .as_ref()
+            .to_owned()
             .to_owned(),
         None => xdg_app_dirs
             .place_config_file(&config_filename)
@@ -151,7 +153,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::app;
+use crate::app::{self, PathListPermissions};
 use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
 
