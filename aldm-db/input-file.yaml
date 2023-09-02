@@ -15,11 +15,17 @@ setups:
 - condition: "(nvidia_maxwell|nvidia_pascal|nvidia_volta|nvidia_turing|nvidia_ampere|nvidia_ada_lovelace)&mainline_kernel"
   install: nvidia-beta
 - condition: "(nvidia_maxwell|nvidia_pascal|nvidia_volta|nvidia_turing|nvidia_ampere|nvidia_ada_lovelace)&!mainline_kernel"
-  install: nvidia-dkms
+  install: nvidia-beta-dkms
 - condition: "(nvidia_turing|nvidia_ampere|nvidia_ada_lovelace)&mainline_kernel"
   install: nvidia-open
 - condition: "(nvidia_turing|nvidia_ampere|nvidia_ada_lovelace)&!mainline_kernel"
   install: nvidia-open-dkms  
+- condition: "nvidia_kepler"
+  install: nvidia-470xx-dkms
+- condition: "nvidia_fermi"
+  install: nvidia-390xx-dkms
+- condition: "nvidia_tesla"
+  install: nvidia-340xx-dkms
 
 # ===============
 named_conditions:
@@ -80,6 +86,14 @@ named_conditions:
 - nvidia_kepler:
     vendor_id: 10de
     device_id: [0fc0, 0fc1, 0fc2, 0fc5, 0fc6, 0fc8, 0fc9, 0fcd, 0fce, 0fd1, 0fd2, 0fd3, 0fd4, 0fd5, 0fd6, 0fd8, 0fd9, 0fdb, 0fdf, 0fe0, 0fe1, 0fe2, 0fe3, 0fe4, 0fe5, 0fe6, 0fe7, 0fe8, 0fe9, 0fea, 0fec, 0fed, 0fee, 0fef, 0ff1, 0ff2, 0ff3, 0ff5, 0ff6, 0ff7, 0ff8, 0ff9, 0ffa, 0ffb, 0ffc, 0ffd, 0ffe, 0fff, 1001, 1003, 1004, 1005, 1007, 1008, 100a, 100c, 101e, 101f, 1020, 1021, 1022, 1023, 1024, 1026, 1027, 1028, 1029, 102a, 102d, 102e, 102f, 103a, 103c, 103f, 1180, 1182, 1183, 1184, 1185, 1186, 1187, 1188, 1189, 118a, 118b, 118c, 118d, 118e, 118f, 1191, 1193, 1194, 1195, 1198, 1199, 119a, 119d, 119e, 119f, 11a0, 11a1, 11a2, 11a3, 11a7, 11a8, 11a9, 11af, 11b0, 11b1, 11b4, 11b6, 11b7, 11b8, 11b9, 11ba, 11bb, 11bc, 11bd, 11be, 11bf, 11c0, 11c2, 11c3, 11c4, 11c5, 11c6, 11c7, 11c8, 11cb, 11e0, 11e1, 11e2, 11e3, 11e7, 11fa, 11fc]
+
+- nvidia_fermi:
+    vendor_id: 10de
+    device_id: [06c0, 06c4, 06ca, 06cb, 06cd, 06d0, 06d1, 06d2, 06d8, 06d9, 06da, 06dc, 06dd, 06de, 06df, 0dc0, 0dc4, 0dc5, 0dc6, 0dcd, 0dce, 0dd1, 0dd2, 0dd3, 0dd6, 0dd8, 0dda, 0de0, 0de1, 0de2, 0de3, 0de4, 0de5, 0de7, 0de8, 0de9, 0dea, 0deb, 0dec, 0ded, 0dee, 0def, 0df0, 0df1, 0df2, 0df3, 0df4, 0df5, 0df6, 0df7, 0df8, 0df9, 0dfa, 0dfc, 0e22, 0e23, 0e24, 0e30, 0e31, 0e3a, 0e3b, 0f00, 0f01, 0f02, 0f03, 0f06, 1040, 1042, 1045, 1048, 1049, 104a, 104b, 104c, 104d, 1050, 1051, 1052, 1054, 1055, 1056, 1057, 1058, 1059, 105a, 105b, 107c, 107d, 1080, 1081, 1082, 1084, 1086, 1087, 1088, 1089, 108b, 108e, 1091, 1094, 1096, 109a, 109b, 1140, 1200, 1201, 1202, 1203, 1205, 1206, 1207, 1208, 1210, 1211, 1212, 1213, 1241, 1243, 1244, 1245, 1246, 1247, 1248, 1249, 124b, 124d, 1251]
+
+- nvidia_tesla:
+    vendor_id: 10de
+    device_id: [0190, 0191, 0192, 0193, 0194, 0197, 019d, 019e, 0400, 0401, 0402, 0403, 0404, 0405, 0406, 0407, 0408, 0409, 040a, 040b, 040c, 040d, 040e, 040f, 0410, 0414, 0418, 0420, 0421, 0422, 0423, 0424, 0425, 0426, 0427, 0428, 0429, 042a, 042b, 042c, 042d, 042e, 042f, 05e0, 05e1, 05e2, 05e3, 05e6, 05e7, 05ea, 05eb, 05ed, 05f1, 05f2, 05f8, 05f9, 05fd, 05fe, 05ff, 0a20, 0a21, 0a22, 0a23, 0a24, 0a26, 0a27, 0a28, 0a29, 0a2a, 0a2b, 0a2c, 0a2d, 0a30, 0a32, 0a34, 0a35, 0a38, 0a3c, 0a60, 0a62, 0a63, 0a64, 0a65, 0a66, 0a67, 0a68, 0a69, 0a6a, 0a6c, 0a6e, 0a6f, 0a70, 0a71, 0a72, 0a73, 0a74, 0a75, 0a76, 0a78, 0a7a, 0a7b, 0a7c, 0ca0, 0ca2, 0ca3, 0ca4, 0ca5, 0ca7, 0ca8, 0ca9, 0cac, 0caf, 0cb0, 0cb1, 0cbc, 10c0, 10c3, 10c5, 10d8]
 
 # ==========
 driver_tags:
