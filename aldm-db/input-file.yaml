@@ -2,9 +2,9 @@
 
 version: "0.0.1"
 
-# =====
-setups:
-# =====
+# =============
+driver_options:
+# =============
 
 - condition: "(nvidia_maxwell|nvidia_pascal|nvidia_volta|nvidia_turing|nvidia_ampere|nvidia_ada_lovelace)&mainline_kernel"
   install: nvidia
@@ -48,7 +48,7 @@ named_conditions:
 # In the test mode (--test commandline argument), arbitrary user-specified 
 # criteria can be assumed to be true.
 # The conditions are evaluated and their evaluated values are cached as found
-# under the above setups. 
+# under the above driver options. 
 
 - mainline_kernel:
     kernel: linux
