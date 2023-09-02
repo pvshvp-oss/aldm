@@ -7,7 +7,7 @@ pub fn init_config() -> Result<(Config, PathBuf), Error> {
         format!("/etc/{}", config_filename).into(),
         format!("/var/tmp/{}/{}", *app::APP_NAME, config_filename).into(),
     ];
-    let config_filepath = app::first_readable_valid_path(&candidate_config_filepaths);
+    let config_filepath = app::first_readable_path(&candidate_config_filepaths);
     let config_filepath = match config_filepath {
         Some(p) => p
             .as_ref()
@@ -53,6 +53,23 @@ pub struct Config {
     pub log_directory: Option<String>,
     pub log_level_filter: Option<log::LevelFilter>,
     pub no_color: Option<bool>,
+}
+
+impl Config {
+    pub fn obtain_unassigned_from(&mut self, other: Self) {
+        self.log_directory = self
+            .log_directory
+            .take()
+            .or(other.log_directory);
+        self.log_level_filter = self
+            .log_level_filter
+            .take()
+            .or(other.log_level_filter);
+        self.no_color = self
+            .no_color
+            .take()
+            .or(other.no_color);
+    }
 }
 
 impl Default for Config {

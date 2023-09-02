@@ -2,7 +2,7 @@ lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
 
-pub fn first_readable_valid_path<'a>(
+pub fn first_readable_path<'a>(
     paths: &'a Vec<impl AsRef<Path> + 'a>,
 ) -> Option<impl AsRef<Path> + 'a> {
     paths
@@ -10,12 +10,28 @@ pub fn first_readable_valid_path<'a>(
         .find(|p| permissions::is_readable(p).unwrap_or(false))
 }
 
-pub fn first_writable_valid_path<'a>(
+pub fn first_writable_path<'a>(
     paths: &'a Vec<impl AsRef<Path> + 'a>,
 ) -> Option<impl AsRef<Path> + 'a> {
     paths
         .iter()
         .find(|p| permissions::is_writable(p).unwrap_or(false))
+}
+
+pub fn all_readable_paths<'a>(
+    paths: &'a Vec<impl AsRef<Path> + 'a>,
+) -> impl Iterator<Item = impl AsRef<Path> + 'a> {
+    paths
+        .iter()
+        .filter(|p| permissions::is_readable(p).unwrap_or(false))
+}
+
+pub fn all_writable_paths<'a>(
+    paths: &'a Vec<impl AsRef<Path> + 'a>,
+) -> impl Iterator<Item = impl AsRef<Path> + 'a> {
+    paths
+        .iter()
+        .filter(|p| permissions::is_writable(p).unwrap_or(false))
 }
 
 #[derive(Debug, Snafu)]
