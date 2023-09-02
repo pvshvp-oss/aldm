@@ -5,7 +5,7 @@ where
     <C as GlobalArguments>::L: LogLevel,
 {
     // Obtain user configuration
-    let (config, config_filepath) = config::init_config()
+    let (config, config_filepaths) = config::init_config()
         .context(app::ConfigSnafu {})
         .context(crate::AppSnafu)?;
 
@@ -124,13 +124,13 @@ where
     tracing::debug!(
         "{} {} {:?}",
         console::Emoji("📂", ""),
-        "Config Filepath: ".magenta(),
-        config_filepath
+        "Config Filepath(s):".magenta(),
+        config_filepaths,
     );
     tracing::debug!(
         "{} {} {:?}",
         console::Emoji("📂", ""),
-        "Log Filepath: ".magenta(),
+        "Log Filepath:".magenta(),
         log_filepath
     );
 

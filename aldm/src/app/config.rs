@@ -1,63 +1,83 @@
-pub fn init_config() -> Result<(Config, PathBuf), Error> {
+pub fn init_config() -> Result<(Config, Vec<PathBuf>), Error> {
     let config_filename = format!("{}.conf", *app::APP_NAME);
     let xdg_app_dirs = xdg::BaseDirectories::with_prefix(*app::APP_NAME)
         .context(RetreiveConfigUserAppBaseDirectoriesSnafu {})?;
+    let default_config_filepath = xdg_app_dirs.get_config_file(&config_filename);
     let candidate_config_filepaths = vec![
-        xdg_app_dirs.get_config_file(&config_filename),
+        default_config_filepath.clone(),
+        format!("/etc/{}/{}", *app::APP_NAME, config_filename).into(),
         format!("/etc/{}", config_filename).into(),
         format!("/var/tmp/{}/{}", *app::APP_NAME, config_filename).into(),
     ];
-    let config_filepath = candidate_config_filepaths
+
+    let mut config = Config::new();
+
+    let readable_config_filepaths = candidate_config_filepaths
         .iter()
-        .first_readable_path();
-    let config_filepath = match config_filepath {
-        Some(p) => p
-            .to_owned()
-            .to_owned(),
-        None => xdg_app_dirs
-            .place_config_file(&config_filename)
-            .context(CreateConfigDirectorySnafu {
-                path: {
-                    let mut config_dirpath = xdg_app_dirs.get_config_home();
-                    config_dirpath.push(*app::APP_NAME);
-                    config_dirpath
-                },
-            })?,
-    };
-    if permissions::is_readable(config_filepath.clone()).unwrap_or(false) {
-        let config_file = fs::File::open(config_filepath.clone()).context(ReadConfigFileSnafu {
-            path: config_filepath.clone(),
-        })?;
-        Ok((
+        .all_readable_paths();
+    for readable_config_filepath in readable_config_filepaths.clone() {
+        println!("{:?}", readable_config_filepath);
+        let config_file =
+            fs::File::open(readable_config_filepath.clone()).context(ReadConfigFileSnafu {
+                path: readable_config_filepath.clone(),
+            })?;
+        config.obtain_unassigned_from(
             serde_yaml::from_reader(BufReader::new(config_file)).context(
                 ConfigFileFormatSnafu {
-                    path: config_filepath.clone(),
+                    path: readable_config_filepath.clone(),
                 },
             )?,
-            config_filepath,
-        ))
-    } else {
-        let config_file =
-            fs::File::create(config_filepath.clone()).context(CreateConfigFileSnafu {
-                path: config_filepath.clone(),
-            })?;
-        let default_config = Config::default();
-        let buf_writer = BufWriter::new(config_file);
-        serde_yaml::to_writer(buf_writer, &default_config).context(WriteConfigFileSnafu {
-            path: config_filepath.clone(),
-        })?;
-        Ok((default_config, config_filepath))
+        );
+        println!("{:#?}", config);
     }
+
+    let readable_config_filepaths = readable_config_filepaths.map(|p| p.clone());
+    if config.is_modified() {
+        Ok((config, readable_config_filepaths.collect::<Vec<PathBuf>>()))
+    } else {
+        Ok((
+            Config::default(),
+            readable_config_filepaths.collect::<Vec<PathBuf>>(),
+        ))
+    }
+}
+
+pub fn create_config_file(config: &Config, config_filepath: &PathBuf) -> Result<(), Error> {
+    serde_yaml::to_writer(
+        BufWriter::new(
+            File::create(config_filepath.clone()).context(CreateConfigFileSnafu {
+                path: config_filepath.clone(),
+            })?,
+        ),
+        &config,
+    )
+    .context(WriteConfigFileSnafu {
+        path: config_filepath.clone(),
+    })
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub log_directory: Option<String>,
+
     pub log_level_filter: Option<log::LevelFilter>,
+
     pub no_color: Option<bool>,
+
+    #[serde(skip)]
+    is_modified: bool,
 }
 
 impl Config {
+    pub fn new() -> Self {
+        Self {
+            log_directory: None,
+            log_level_filter: None,
+            no_color: None,
+            is_modified: false,
+        }
+    }
+
     pub fn obtain_unassigned_from(&mut self, other: Self) {
         self.log_directory = self
             .log_directory
@@ -71,6 +91,11 @@ impl Config {
             .no_color
             .take()
             .or(other.no_color);
+        self.is_modified = true;
+    }
+
+    pub fn is_modified(&self) -> bool {
+        self.is_modified
     }
 }
 
@@ -80,6 +105,7 @@ impl Default for Config {
             log_directory: None,
             log_level_filter: Some(log::LevelFilter::Info),
             no_color: Some(false),
+            is_modified: true,
         }
     }
 }
@@ -148,7 +174,7 @@ pub enum Error {
 // region: IMPORTS
 
 use std::{
-    fs,
+    fs::{self, File},
     io::{BufReader, BufWriter},
     path::PathBuf,
 };
