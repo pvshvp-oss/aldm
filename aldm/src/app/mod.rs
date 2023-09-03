@@ -1,7 +1,7 @@
 lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
-trait Permissions<'a, P> {
+pub trait Permissions<'a, P> {
     type P1;
 
     fn is_readable(&self) -> bool;
@@ -92,9 +92,13 @@ where
 
     fn first_writable_path(&mut self) -> Option<P>;
 
+    fn first_creatable_path(&mut self) -> Option<P>;
+
     fn all_readable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a>;
 
     fn all_writable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a>;
+
+    fn all_creatable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a>;
 
     fn first_valid_path(&'a mut self, f: fn(&Q) -> bool) -> Option<P>;
 
@@ -107,19 +111,27 @@ where
     P: AsRef<Path> + 'a,
 {
     fn first_readable_path(&mut self) -> Option<P> {
-        self.find(|p| p.is_readable())
+        self.first_valid_path(P::is_readable)
     }
 
     fn first_writable_path(&mut self) -> Option<P> {
-        self.find(|p| p.is_writable())
+        self.first_valid_path(P::is_writable)
+    }
+
+    fn first_creatable_path(&mut self) -> Option<P> {
+        self.first_valid_path(P::is_creatable)
     }
 
     fn all_readable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
-        Box::new(self.filter(|p| p.is_readable()))
+        self.all_valid_paths(P::is_readable)
     }
 
     fn all_writable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
-        Box::new(self.filter(|p| p.is_writable()))
+        self.all_valid_paths(P::is_writable)
+    }
+
+    fn all_creatable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
+        self.all_valid_paths(P::is_creatable)
     }
 
     fn first_valid_path(&mut self, f: fn(&P) -> bool) -> Option<P> {
@@ -137,27 +149,27 @@ where
     P: AsRef<Path> + 'a,
 {
     fn first_readable_path(&mut self) -> Option<P> {
-        self.find(|p| p.is_readable())
-            .flatten()
+        self.first_valid_path(Option::<P>::is_readable)
     }
 
     fn first_writable_path(&mut self) -> Option<P> {
-        self.find(|p| p.is_writable())
-            .flatten()
+        self.first_valid_path(Option::<P>::is_writable)
+    }
+
+    fn first_creatable_path(&mut self) -> Option<P> {
+        self.first_valid_path(Option::<P>::is_creatable)
     }
 
     fn all_readable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
-        Box::new(
-            self.filter(|p| p.is_readable())
-                .flat_map(convert::identity),
-        )
+        self.all_valid_paths(Option::<P>::is_readable)
     }
 
     fn all_writable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
-        Box::new(
-            self.filter(|p| p.is_writable())
-                .flat_map(convert::identity),
-        )
+        self.all_valid_paths(Option::<P>::is_writable)
+    }
+
+    fn all_creatable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
+        self.all_valid_paths(Option::<P>::is_creatable)
     }
 
     fn first_valid_path(&mut self, f: fn(&Option<P>) -> bool) -> Option<P> {
@@ -171,7 +183,7 @@ where
     ) -> Box<dyn Iterator<Item = P> + 'a> {
         Box::new(
             self.filter(move |p| f(p))
-                .flatten(),
+                .flat_map(convert::identity),
         )
     }
 }

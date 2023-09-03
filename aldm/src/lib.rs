@@ -35,21 +35,14 @@ where
         .context(AppSnafu {})?
         .ensure_loaded();
     // Store readable config filepaths that are likely used
-    let config_filepaths = vec![
+    let config_filepaths: Vec<PathBuf> = vec![
         optional_preferred_config_filepath,
         Some(xdg_config_filepath.clone()),
         Some(global_config_filepath.clone()),
     ]
     .into_iter()
     .all_readable_paths()
-    .collect::<Vec<PathBuf>>();
-
-    println!(
-        "permissions::is_writable(\"/tmp/hello/world\"): {}",
-        permissions::is_writable("/tmp/hello/world").unwrap_or(false)
-    );
-
-    todo!()
+    .collect();
 
     // // Begin logging with preferred log directory and preferred verbosity
     // let config_verbosity_filter: Option<LevelFilter> = (&config)
@@ -206,7 +199,7 @@ pub enum Error {
 
 // region: IMPORTS
 
-use app::ValidPaths;
+use app::{Permissions, ValidPaths};
 use clap_verbosity_flag::LogLevel;
 use core::fmt;
 use owo_colors::OwoColorize;
