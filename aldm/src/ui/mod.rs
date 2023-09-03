@@ -1,151 +1,3 @@
-#[tracing::instrument(level = "trace")]
-pub fn run_common<C>() -> Result<(C, Vec<WorkerGuard>), crate::Error>
-where
-    C: clap::Parser + CliModifier + fmt::Debug,
-    <C as GlobalArguments>::L: LogLevel,
-{
-    // Obtain user configuration
-    let (config, config_filepaths) = config::init_config()
-        .context(app::ConfigSnafu {})
-        .context(crate::AppSnafu)?;
-
-    // Obtain CLI arguments
-    let cli_input = C::parse();
-
-    // Turn off colors if needed
-    let mut is_cli_uncolored = cli_input.is_uncolored();
-    if !is_cli_uncolored {
-        if let Some(no_color) = config.no_color {
-            is_cli_uncolored = no_color;
-        }
-    }
-    if is_cli_uncolored {
-        anstream::ColorChoice::Never.write_global();
-        owo_colors::set_override(false);
-    }
-
-    // Begin logging with preferred log directory and preferred verbosity
-    let config_log_dirpath = config
-        .log_directory
-        .as_ref()
-        .map(|s| PathBuf::from(s));
-    let config_verbosity_filter: Option<LevelFilter> = (&config)
-        .log_level_filter
-        .and_then(|lf| {
-            lf.as_str()
-                .parse()
-                .ok()
-        });
-    let verbosity_filter = cli_input
-        .verbosity_filter()
-        .or(config_verbosity_filter);
-    let (mut handle, log_filepath) = logging::init_log(config_log_dirpath, verbosity_filter)
-        .context(app::LoggingSnafu {})
-        .context(crate::AppSnafu {})?;
-
-    // Modify logging behavior if Plain or Json output is desired
-    if cli_input.is_json() {
-        _ = handle
-            .switch_to_json()
-            .context(app::LoggingSnafu {})
-            .context(crate::AppSnafu {})?;
-    } else if cli_input.is_plain() {
-        _ = handle
-            .switch_to_plain()
-            .context(app::LoggingSnafu {})
-            .context(crate::AppSnafu {})?;
-    } else if cli_input.is_test() {
-        _ = handle
-            .switch_to_test()
-            .context(app::LoggingSnafu {})
-            .context(crate::AppSnafu {})?;
-    }
-
-    // Welcome message
-    tracing::debug!(
-        "{} - {}",
-        "ALDM".bold(),
-        "A Driver Manager for Arch Linux".magenta()
-    );
-    tracing::debug!(
-        "{}  {} {}",
-        console::Emoji("✉️", ""),
-        "shivanandvp".italic(),
-        "<shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>".italic()
-    );
-    tracing::debug!(
-        target:"TEST", "{}{}{}{}{}{}{}{}",
-        "███".black(),
-        "███".red(),
-        "███".green(),
-        "███".yellow(),
-        "███".blue(),
-        "███".purple(),
-        "███".cyan(),
-        "███".white()
-    );
-    tracing::debug!(
-        target:"TEST", "{}{}{}{}{}{}{}{}",
-        "███".bright_black(),
-        "███".bright_red(),
-        "███".bright_green(),
-        "███".bright_yellow(),
-        "███".bright_blue(),
-        "███".bright_purple(),
-        "███".bright_cyan(),
-        "███".bright_white()
-    );
-
-    // Test messages
-    tracing::trace!(target:"TEST", "{} Testing trace!...", console::Emoji("🧪", ""));
-    tracing::debug!(target:"TEST", "{} Testing debug!...", console::Emoji("🧪", ""));
-    tracing::info!(target:"TEST", "{} Testing info!...", console::Emoji("🧪", ""));
-    tracing::warn!(target:"TEST", "{} Testing warn!...", console::Emoji("🧪", ""));
-    tracing::error!(target:"TEST", "{} Testing error!...", console::Emoji("🧪", ""));
-
-    tracing::info!(target:"JSON", "{} Testing: {}", console::Emoji("🧪", ""), "{\"JSON\": \"Target\"}");
-    tracing::info!(target:"PLAIN", "{} Testing: Plain Target", console::Emoji("🧪", ""));
-
-    tracing::debug!(
-        "{}  The {} is {}... {}",
-        console::Emoji("⚙️", ""),
-        "configuration".cyan(),
-        "loaded".green(),
-        console::Emoji("✅", ""),
-    );
-    tracing::debug!(
-        "{} The {} has {}... {}",
-        console::Emoji("📝", ""),
-        "logging".cyan(),
-        "begun".green(),
-        console::Emoji("✅", ""),
-    );
-
-    tracing::debug!(
-        "{} {} {:?}",
-        console::Emoji("📂", ""),
-        "Config Filepath(s):".magenta(),
-        config_filepaths,
-    );
-    tracing::debug!(
-        "{} {} {:?}",
-        console::Emoji("📂", ""),
-        "Log Filepath:".magenta(),
-        log_filepath
-    );
-
-    tracing::trace!(
-        "{}  {} {:#?}",
-        console::Emoji("⌨️", ""),
-        "CLI input arguments:"
-            .magenta()
-            .dimmed(),
-        cli_input.dimmed()
-    );
-
-    Ok((cli_input, handle.worker_guards))
-}
-
 impl<T> CliModifier for T
 where
     T: GlobalArguments,
@@ -158,10 +10,6 @@ where
     <Self as GlobalArguments>::L: LogLevel,
 {
     fn verbosity_filter(&self) -> Option<LevelFilter> {
-        if self.is_plain() || self.is_json() {
-            return Some(LevelFilter::INFO);
-        }
-
         let verbosity_flag_filter = self
             .verbosity()
             .log_level_filter();
@@ -227,10 +75,13 @@ use core::fmt;
 use owo_colors::OwoColorize;
 use snafu::{ResultExt, Snafu};
 use std::{env, path::PathBuf};
-use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::filter::LevelFilter;
 
-use crate::app::{self, config, logging};
+use crate::app::{
+    self,
+    config::{self, Configuration},
+    logging,
+};
 
 // endregion: IMPORTS
 

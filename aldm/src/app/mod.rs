@@ -2,64 +2,52 @@ lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
 
-pub trait PathListPermissions<'a, P>: Iterator<Item = P> + Sized
+pub trait OptionalPathListPermissions<P>: Iterator<Item = Option<P>> + Sized
 where
-    P: AsRef<Path> + 'a,
+    P: Into<PathBuf>,
 {
     fn first_readable_path(mut self) -> Option<P> {
-        self.find(|p| permissions::is_readable(p).unwrap_or(false))
+        self.find(|p| {
+            p.map(|p| permissions::is_readable(Into::<PathBuf>::into(p)).unwrap_or(false))
+                .unwrap_or(false)
+        })
+        .flatten()
     }
 
     fn first_writable_path(mut self) -> Option<P> {
-        self.find(|p| permissions::is_writable(p).unwrap_or(false))
+        self.find(|p| {
+            p.map(|p| permissions::is_writable(Into::<PathBuf>::into(p)).unwrap_or(false))
+                .unwrap_or(false)
+        })
+        .flatten()
     }
 
-    fn all_readable_paths(self) -> iter::Filter<Self, fn(&P) -> bool> {
-        self.filter(|p| permissions::is_readable(p).unwrap_or(false))
+    fn all_readable_paths(self) -> Box<dyn Iterator<Item = P>> {
+        Box::new(
+            self.filter(|p: &Option<P>| {
+                p.map(|p| permissions::is_readable(Into::<PathBuf>::into(p)).unwrap_or(false))
+                    .unwrap_or(false)
+            })
+            .flat_map(std::convert::identity),
+        )
     }
 
-    fn all_writable_paths(self) -> iter::Filter<Self, fn(&P) -> bool> {
-        self.filter(|p| permissions::is_writable(p).unwrap_or(false))
+    fn all_writable_paths(self) -> Box<dyn Iterator<Item = P>> {
+        Box::new(
+            self.filter(|p: &Option<P>| {
+                p.map(|p| permissions::is_writable(Into::<PathBuf>::into(p)).unwrap_or(false))
+                    .unwrap_or(false)
+            })
+            .flat_map(std::convert::identity),
+        )
     }
 }
 
-impl<'a, T, P> PathListPermissions<'a, P> for T
+impl<T, P> OptionalPathListPermissions<P> for T
 where
-    T: Iterator<Item = P>,
-    P: AsRef<Path> + 'a,
+    T: Iterator<Item = Option<P>>,
+    P: Into<PathBuf>,
 {
-}
-
-pub fn first_readable_path<'a>(
-    paths: &'a Vec<impl AsRef<Path> + 'a>,
-) -> Option<impl AsRef<Path> + 'a> {
-    paths
-        .iter()
-        .find(|p| permissions::is_readable(p).unwrap_or(false))
-}
-
-pub fn first_writable_path<'a>(
-    paths: &'a Vec<impl AsRef<Path> + 'a>,
-) -> Option<impl AsRef<Path> + 'a> {
-    paths
-        .iter()
-        .find(|p| permissions::is_writable(p).unwrap_or(false))
-}
-
-pub fn all_readable_paths<'a>(
-    paths: &'a Vec<impl AsRef<Path> + 'a>,
-) -> impl Iterator<Item = impl AsRef<Path> + 'a> {
-    paths
-        .iter()
-        .filter(|p| permissions::is_readable(p).unwrap_or(false))
-}
-
-pub fn all_writable_paths<'a>(
-    paths: &'a Vec<impl AsRef<Path> + 'a>,
-) -> impl Iterator<Item = impl AsRef<Path> + 'a> {
-    paths
-        .iter()
-        .filter(|p| permissions::is_writable(p).unwrap_or(false))
 }
 
 #[derive(Debug, Snafu)]
@@ -85,13 +73,24 @@ pub enum Error {
         #[snafu(backtrace)]
         source: i18n::Error,
     },
+
+    #[non_exhaustive]
+    #[snafu(
+        display("could not retreive the XDG app directories for the user: {source}"),
+        visibility(pub)
+    )]
+    FetchXdgAppDirectories { source: xdg::BaseDirectoriesError },
 }
 
 // region: IMPORTS
 
 use lazy_static::lazy_static;
 use snafu::Snafu;
-use std::{iter, path::Path};
+use std::{
+    convert,
+    iter::{self, FlatMap},
+    path::{Path, PathBuf},
+};
 
 // endregion: IMPORTS
 
