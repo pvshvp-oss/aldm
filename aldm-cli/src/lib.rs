@@ -1,5 +1,5 @@
 pub fn run_cli() -> Result<(), aldm::Error> {
-    let (_cli_input, _worker_guards) = ui::run_common::<CliTemplate>()?;
+    let (_cli_input, _worker_guards) = aldm::run_common::<CliTemplate>()?;
 
     tracing::debug!(
         "Running in {} mode... {}",
@@ -19,7 +19,6 @@ pub enum Error {
 }
 
 // region: IMPORTS
-use aldm::ui;
 use owo_colors::OwoColorize;
 use snafu::Snafu;
 

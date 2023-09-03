@@ -1,53 +1,179 @@
 lazy_static! {
     pub static ref APP_NAME: &'static str = "aldm";
 }
+trait Permissions<'a, P> {
+    type P1;
 
-pub trait OptionalPathListPermissions<P>: Iterator<Item = Option<P>> + Sized
+    fn is_readable(&self) -> bool;
+
+    fn is_writable(&self) -> bool;
+
+    fn is_creatable(&self) -> bool;
+
+    fn largest_valid_subset(&'a self) -> Option<Self::P1>;
+}
+
+impl<'a, P> Permissions<'a, P> for P
 where
-    P: Into<PathBuf>,
+    P: AsRef<Path>,
 {
-    fn first_readable_path(mut self) -> Option<P> {
-        self.find(|p| {
-            p.map(|p| permissions::is_readable(Into::<PathBuf>::into(p)).unwrap_or(false))
-                .unwrap_or(false)
-        })
-        .flatten()
+    type P1 = &'a Path;
+
+    fn is_readable(&self) -> bool {
+        permissions::is_readable(self).unwrap_or(false)
     }
 
-    fn first_writable_path(mut self) -> Option<P> {
-        self.find(|p| {
-            p.map(|p| permissions::is_writable(Into::<PathBuf>::into(p)).unwrap_or(false))
-                .unwrap_or(false)
-        })
-        .flatten()
+    fn is_writable(&self) -> bool {
+        permissions::is_writable(self).unwrap_or(false)
     }
 
-    fn all_readable_paths(self) -> Box<dyn Iterator<Item = P>> {
-        Box::new(
-            self.filter(|p: &Option<P>| {
-                p.map(|p| permissions::is_readable(Into::<PathBuf>::into(p)).unwrap_or(false))
-                    .unwrap_or(false)
-            })
-            .flat_map(std::convert::identity),
-        )
+    fn is_creatable(&self) -> bool {
+        match self.largest_valid_subset() {
+            Some(p) => p.is_writable(),
+            None => false,
+        }
     }
 
-    fn all_writable_paths(self) -> Box<dyn Iterator<Item = P>> {
-        Box::new(
-            self.filter(|p: &Option<P>| {
-                p.map(|p| permissions::is_writable(Into::<PathBuf>::into(p)).unwrap_or(false))
-                    .unwrap_or(false)
-            })
-            .flat_map(std::convert::identity),
-        )
+    fn largest_valid_subset(&'a self) -> Option<Self::P1> {
+        let mut path = self.as_ref();
+        while !path.exists() {
+            match path.parent() {
+                Some(p) => path = p,
+                None => {
+                    return None;
+                }
+            };
+        }
+
+        Some(path)
     }
 }
 
-impl<T, P> OptionalPathListPermissions<P> for T
+impl<'a, P> Permissions<'a, P> for Option<P>
 where
-    T: Iterator<Item = Option<P>>,
-    P: Into<PathBuf>,
+    P: AsRef<Path>,
 {
+    type P1 = &'a Path;
+
+    fn is_readable(&self) -> bool {
+        match self {
+            Some(p) => p.is_readable(),
+            None => false,
+        }
+    }
+
+    fn is_writable(&self) -> bool {
+        match self {
+            Some(p) => p.is_writable(),
+            None => false,
+        }
+    }
+
+    fn is_creatable(&self) -> bool {
+        match self {
+            Some(p) => p.is_creatable(),
+            None => false,
+        }
+    }
+
+    fn largest_valid_subset(&'a self) -> Option<Self::P1> {
+        match self {
+            Some(p) => p.largest_valid_subset(),
+            None => None,
+        }
+    }
+}
+
+pub trait ValidPaths<'a, P, Q>
+where
+    P: AsRef<Path> + 'a,
+{
+    fn first_readable_path(&mut self) -> Option<P>;
+
+    fn first_writable_path(&mut self) -> Option<P>;
+
+    fn all_readable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a>;
+
+    fn all_writable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a>;
+
+    fn first_valid_path(&'a mut self, f: fn(&Q) -> bool) -> Option<P>;
+
+    fn all_valid_paths(&'a mut self, f: fn(&Q) -> bool) -> Box<dyn Iterator<Item = P> + 'a>;
+}
+
+impl<'a, P, I> ValidPaths<'a, P, P> for I
+where
+    I: Iterator<Item = P> + 'a,
+    P: AsRef<Path> + 'a,
+{
+    fn first_readable_path(&mut self) -> Option<P> {
+        self.find(|p| p.is_readable())
+    }
+
+    fn first_writable_path(&mut self) -> Option<P> {
+        self.find(|p| p.is_writable())
+    }
+
+    fn all_readable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
+        Box::new(self.filter(|p| p.is_readable()))
+    }
+
+    fn all_writable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
+        Box::new(self.filter(|p| p.is_writable()))
+    }
+
+    fn first_valid_path(&mut self, f: fn(&P) -> bool) -> Option<P> {
+        self.find(|p| f(p))
+    }
+
+    fn all_valid_paths(&'a mut self, f: fn(&P) -> bool) -> Box<dyn Iterator<Item = P> + 'a> {
+        Box::new(self.filter(move |p| f(p)))
+    }
+}
+
+impl<'a, P, I> ValidPaths<'a, P, Option<P>> for I
+where
+    I: Iterator<Item = Option<P>> + 'a,
+    P: AsRef<Path> + 'a,
+{
+    fn first_readable_path(&mut self) -> Option<P> {
+        self.find(|p| p.is_readable())
+            .flatten()
+    }
+
+    fn first_writable_path(&mut self) -> Option<P> {
+        self.find(|p| p.is_writable())
+            .flatten()
+    }
+
+    fn all_readable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
+        Box::new(
+            self.filter(|p| p.is_readable())
+                .flat_map(convert::identity),
+        )
+    }
+
+    fn all_writable_paths(&'a mut self) -> Box<dyn Iterator<Item = P> + 'a> {
+        Box::new(
+            self.filter(|p| p.is_writable())
+                .flat_map(convert::identity),
+        )
+    }
+
+    fn first_valid_path(&mut self, f: fn(&Option<P>) -> bool) -> Option<P> {
+        self.find(|p| f(p))
+            .flatten()
+    }
+
+    fn all_valid_paths(
+        &'a mut self,
+        f: fn(&Option<P>) -> bool,
+    ) -> Box<dyn Iterator<Item = P> + 'a> {
+        Box::new(
+            self.filter(move |p| f(p))
+                .flatten(),
+        )
+    }
 }
 
 #[derive(Debug, Snafu)]
@@ -86,11 +212,7 @@ pub enum Error {
 
 use lazy_static::lazy_static;
 use snafu::Snafu;
-use std::{
-    convert,
-    iter::{self, FlatMap},
-    path::{Path, PathBuf},
-};
+use std::{convert, path::Path};
 
 // endregion: IMPORTS
 
