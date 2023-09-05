@@ -258,6 +258,6 @@ use std::path::{Path, PathBuf};
 
 use snafu::{self, Snafu};
 
-use crate::permissions::Permissions;
+use crate::path::ValidPath;
 
 // endregion: IMPORTS

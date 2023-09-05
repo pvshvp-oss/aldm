@@ -14,9 +14,9 @@ edition.workspace = true
 
 [features]
 default = [ "config", "log", "serde_yaml" ]
-permissions = [ "dep:permissions" ]
-log = [ "permissions", "dep:tracing", "dep:tracing-appender", "dep:tracing-subscriber" ]
-config = [ "permissions" ]
+path = [ "dep:permissions" ]
+log = [ "path", "dep:tracing", "dep:tracing-appender", "dep:tracing-subscriber" ]
+config = [ "path" ]
 serde_yaml = [ "dep:serde", "dep:serde_yaml" ]
 
 [dependencies]

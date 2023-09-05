@@ -6,7 +6,7 @@ pub mod config;
 #[cfg(feature = "log")]
 pub mod log;
 
-#[cfg(feature = "permissions")]
-pub mod permissions;
+#[cfg(feature = "path")]
+pub mod path;
 
 // endregion: MODULES
