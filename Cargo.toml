@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "dapp",
     "aldm",
     "aldm-cli",
     "aldm-gui",
