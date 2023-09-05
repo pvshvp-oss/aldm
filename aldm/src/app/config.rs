@@ -1,5 +1,5 @@
 /// A trait to be implemented by configuration structs. Any assignable fields
-/// must all have their types wrapped in `Option`, for example, `Option<bool>`.
+/// must all be optional, for example, `Option<bool>`.
 pub trait Configuration: Default + DeserializeOwned {
     /// A method that returns a new configuration `struct` with all assignable
     /// fields set to `None`. Any assignable fields not set to None will not

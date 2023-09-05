@@ -23,6 +23,7 @@ edition = "2021"
 
 [workspace.dependencies]
 
+dapp = { path = "dapp" }
 aldm = { path = "aldm" }
 
 # Logging
