@@ -46,18 +46,18 @@ pub trait Configuration: Default {
     /// implements sample format selectors for some common types like YAML
     /// ([`YamlFormat`]), but one can implement custom format selectors
     /// anywhere in a similar manner.
-    fn string<S, D>(&mut self, config_string: S) -> Result<&mut Self, Error>
+    fn string<'de, D>(&mut self, config_string: &'de str) -> Result<&mut Self, Error>
     where
-        S: AsRef<str>,
-        Self: for<'de> Deserialize<'de>,
-        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
-            + for<'de> From<&'de str>,
+        Self: Deserialize<'de>,
+        D: Deserializer<'de> + From<&'de str>,
     {
-        let other_config =
-            Self::deserialize(D::from(config_string.as_ref())).context(ParseConfigStringSnafu {
-                string: config_string
-                    .as_ref()
-                    .to_owned(),
+        let other_config = Self::deserialize(D::from(config_string))
+            .map_err(|serde_error| {
+                // Box::from(serde_error)
+                Box::from("Hello")
+            })
+            .context(ParseConfigStringSnafu {
+                string: config_string.clone(),
             })?;
         self.config(other_config);
         self.set_loaded();
@@ -71,12 +71,10 @@ pub trait Configuration: Default {
     /// the method fails silently. However, if the file exists but cannot be
     /// read, or if the file has an invalid format, an error is returned. This
     /// method must call `self.set_loaded()` if any fields were set/modified.  
-    fn filepath<P, D>(&mut self, config_filepath: P) -> Result<&mut Self, Error>
+    fn filepath<'de, D>(&mut self, config_filepath: impl AsRef<Path>) -> Result<&mut Self, Error>
     where
-        P: AsRef<Path>,
-        Self: for<'de> Deserialize<'de>,
-        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
-            + From<BufReader<File>>,
+        Self: Deserialize<'de>,
+        D: Deserializer<'de> + From<BufReader<File>>,
     {
         let config_filepath = config_filepath
             .as_ref()
@@ -88,8 +86,12 @@ pub trait Configuration: Default {
                 path: config_filepath.clone(),
             })?;
             let file_reader = BufReader::new(file);
-            let other_config =
-                Self::deserialize(D::from(file_reader)).context(ParseConfigFileSnafu {
+            let other_config = Self::deserialize(D::from(file_reader))
+                .map_err(|serde_error| {
+                    // Box::from(serde_error)
+                    Box::from("Hello")
+                })
+                .context(ParseConfigFileSnafu {
                     path: config_filepath.clone(),
                 })?;
             self.config(other_config);
@@ -100,18 +102,16 @@ pub trait Configuration: Default {
 
     #[cfg(feature = "serde")]
     /// Like [`filepath()`], but takes an optional filepath
-    fn optional_filepath<P, D>(
+    fn optional_filepath<'de, D>(
         &mut self,
-        optional_config_filepath: Option<P>,
+        optional_config_filepath: Option<impl AsRef<Path>>,
     ) -> Result<&mut Self, Error>
     where
-        P: AsRef<Path>,
-        Self: for<'de> Deserialize<'de>,
-        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
-            + From<BufReader<File>>,
+        Self: Deserialize<'de>,
+        D: Deserializer<'de> + From<BufReader<File>> + 'de,
     {
         match optional_config_filepath {
-            Some(config_filepath) => self.filepath::<P, D>(config_filepath),
+            Some(config_filepath) => self.filepath::<D>(config_filepath),
             None => Ok(self),
         }
     }
@@ -119,12 +119,13 @@ pub trait Configuration: Default {
     #[cfg(feature = "serde")]
     /// Like [`filepath()`], but additionally also fails when a file does not
     /// exist at the given config_filepath.
-    fn try_filepath<P, D>(&mut self, config_filepath: P) -> Result<&mut Self, Error>
+    fn try_filepath<'de, D>(
+        &mut self,
+        config_filepath: impl AsRef<Path>,
+    ) -> Result<&mut Self, Error>
     where
-        P: AsRef<Path>,
-        Self: for<'de> Deserialize<'de>,
-        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
-            + From<BufReader<File>>,
+        Self: Deserialize<'de>,
+        D: Deserializer<'de> + From<BufReader<File>>,
     {
         if !config_filepath.exists() {
             Err(Error::FindConfigFile {
@@ -133,24 +134,22 @@ pub trait Configuration: Default {
                     .to_owned(),
             })
         } else {
-            self.filepath::<P, D>(config_filepath)
+            self.filepath::<D>(config_filepath)
         }
     }
 
     #[cfg(feature = "serde")]
     /// Like [`try_filepath()`], but takes an optional filepath.
-    fn try_optional_filepath<P, D>(
+    fn try_optional_filepath<'de, D>(
         &mut self,
-        optional_config_filepath: Option<P>,
+        optional_config_filepath: Option<impl AsRef<Path>>,
     ) -> Result<&mut Self, Error>
     where
-        P: AsRef<Path>,
-        Self: for<'de> Deserialize<'de>,
-        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
-            + From<BufReader<File>>,
+        Self: Deserialize<'de>,
+        D: Deserializer<'de> + From<BufReader<File>>,
     {
         match optional_config_filepath {
-            Some(config_filepath) => self.try_filepath::<P, D>(config_filepath),
+            Some(config_filepath) => self.try_filepath::<D>(config_filepath),
             None => Err(Error::FindOptionalConfigFile {
                 optional_path: None,
             }),
@@ -503,16 +502,16 @@ trait Deserializer<'de>: Sized {
 pub struct YamlFormat<'de>(serde_yaml::Deserializer<'de>);
 
 #[cfg(feature = "yaml")]
-impl<'de> From<BufReader<File>> for YamlFormat<'de> {
+impl From<BufReader<File>> for YamlFormat<'_> {
     fn from(reader: BufReader<File>) -> Self {
-        Self(serde_yaml::Deserializer::<'de>::from_reader(reader))
+        Self(serde_yaml::Deserializer::from_reader(reader))
     }
 }
 
 #[cfg(feature = "yaml")]
 impl<'de> From<&'de str> for YamlFormat<'de> {
     fn from(string: &'de str) -> Self {
-        Self(serde_yaml::Deserializer::<'de>::from_str(string))
+        Self(serde_yaml::Deserializer::from_str(string))
     }
 }
 
@@ -580,9 +579,12 @@ pub enum Error {
 
 use std::{
     fs::File,
-    io::{self, BufReader},
+    io::BufReader,
     path::{Path, PathBuf},
 };
+
+#[cfg(feature = "serde")]
+use serde::de::Deserialize;
 
 #[cfg(feature = "serde")]
 use serde::de::Visitor;
@@ -594,7 +596,7 @@ use ambassador::delegatable_trait_remote;
 use ambassador::Delegate;
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Deserializer};
+use serde::Deserializer;
 
 use snafu::{self, ResultExt, Snafu};
 
@@ -610,7 +612,7 @@ mod tests {
 
     use super::*;
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize)]
     struct Config {
         some_bool: Option<bool>,
         some_string: Option<String>,
@@ -665,7 +667,8 @@ mod tests {
     #[test]
     fn deserialize_yaml() {
         let mut config = Config::new();
-        config.string::<&str, YamlFormat>("{some_bool: true}");
+        config.string::<YamlFormat>("{some_bool: true}");
+        println!("{:#?}", config);
     }
 }
 
