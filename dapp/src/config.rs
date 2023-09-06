@@ -31,28 +31,60 @@ pub trait Configuration: Default {
 
     #[cfg(feature = "serde")]
     /// Replace any unassigned fields (which have the value `None`) from a
+    /// config string if the string is valid and has the relevant fields set.
+    /// If the config string has an invalid format, an error is returned. This
+    /// method must call `self.set_loaded()` if any fields were set/modified.  
+    /// The meanings of the named lifetimes, associate types, and generic types
+    /// are as follows:
+    /// - [`S`]: The string-like object which contains the configuration in one
+    /// of the supported formats
+    /// - [`D`]: A format selector generic type which is a serde `Deserializer`
+    /// trait implementor and also implements `From<S>` to permit being created
+    /// from a string. In practice, one can create a newtype to wrap the
+    /// Deserializer struct (not trait this time) which can be converted to the
+    /// configuration struct using standard serde methods. This crate
+    /// implements sample format selectors for some common types like YAML
+    /// ([`YamlFormat`]), but one can implement custom format selectors
+    /// anywhere in a similar manner.
+    fn string<S, D>(&mut self, config_string: S) -> Result<&mut Self, Error>
+    where
+        S: AsRef<str>,
+        Self: for<'de> Deserialize<'de>,
+        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
+            + for<'de> From<&'de str>,
+    {
+        let other_config =
+            Self::deserialize(D::from(config_string.as_ref())).context(ParseConfigStringSnafu {
+                string: config_string
+                    .as_ref()
+                    .to_owned(),
+            })?;
+        self.config(other_config);
+        self.set_loaded();
+        Ok(self)
+    }
+
+    #[cfg(feature = "serde")]
+    /// Replace any unassigned fields (which have the value `None`) from a
     /// config filepath if the file at the supplied filepath is valid and has
-    /// the relevant fields set. Files which do not exist, or which cannot be
-    /// read, or which have invalid formats should return an error. This method
-    /// must call `self.set_loaded()` if any fields were set/modified.
-    fn try_filepath<'de, P, D>(&mut self, config_filepath: P) -> Result<&mut Self, Error>
+    /// the relevant fields set. If a file does not exist at that filepath,
+    /// the method fails silently. However, if the file exists but cannot be
+    /// read, or if the file has an invalid format, an error is returned. This
+    /// method must call `self.set_loaded()` if any fields were set/modified.  
+    fn filepath<P, D>(&mut self, config_filepath: P) -> Result<&mut Self, Error>
     where
         P: AsRef<Path>,
-        Self: Deserialize<'de>,
-        D: Deserializer<'de> + From<BufReader<File>>,
+        Self: for<'de> Deserialize<'de>,
+        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
+            + From<BufReader<File>>,
     {
-        let config_filepath = config_filepath.as_ref();
+        let config_filepath = config_filepath
+            .as_ref()
+            .to_owned();
         if !config_filepath.exists() {
-            Err(Error::FindConfigFile {
-                path: config_filepath.clone(),
-            })
-        } else if !config_filepath.is_readable() {
-            Err(Error::ReadConfigFile {
-                path: config_filepath.clone(),
-                source: std::io::ErrorKind::PermissionDenied.into(),
-            })
+            Ok(self)
         } else {
-            let file = File::open(config_filepath.as_ref()).context(ReadConfigFileSnafu {
+            let file = File::open(config_filepath.clone()).context(ReadConfigFileSnafu {
                 path: config_filepath.clone(),
             })?;
             let file_reader = BufReader::new(file);
@@ -67,58 +99,61 @@ pub trait Configuration: Default {
     }
 
     #[cfg(feature = "serde")]
-    /// Like [`try_filepath()`], but takes an optional filepath.
-    fn try_optional_filepath<'de, P, D>(
-        &mut self,
-        optional_config_filepath: Option<P>,
-    ) -> Result<&mut Self, Error>
-    where
-        P: AsRef<Path>,
-        Self: Deserialize<'de>,
-        D: Deserializer<'de> + From<BufReader<File>>,
-    {
-        match optional_config_filepath {
-            Some(config_filepath) => self.try_filepath::<'de, P, D>(config_filepath),
-            None => Err(Error::FindOptionalConfigFile {
-                path: optional_config_filepath.clone(),
-            }),
-        }
-    }
-
-    #[cfg(feature = "serde")]
-    /// Like [`try_filepath()`], but invalid paths fail quietly, allowing one
-    /// to use preferred config filepaths that may or may not exist. Invalid
-    /// file formats still result in an error.
-    fn filepath<'de, P, D>(&mut self, config_filepath: P) -> Result<&mut Self, Error>
-    where
-        P: AsRef<Path>,
-        Self: Deserialize<'de>,
-        D: Deserializer<'de> + From<BufReader<File>>,
-    {
-        let result = self.try_filepath::<'de, P, D>(config_filepath);
-        match result {
-            Ok(_) => result,
-            Err(err) => match err {
-                Error::FindConfigFile { .. } | Error::ReadConfigFile { .. } => Ok(self),
-                _ => Err(err),
-            },
-        }
-    }
-
-    #[cfg(feature = "serde")]
     /// Like [`filepath()`], but takes an optional filepath
-    fn optional_filepath<'de, P, D>(
+    fn optional_filepath<P, D>(
         &mut self,
         optional_config_filepath: Option<P>,
     ) -> Result<&mut Self, Error>
     where
         P: AsRef<Path>,
-        Self: Deserialize<'de>,
-        D: Deserializer<'de> + From<BufReader<File>>,
+        Self: for<'de> Deserialize<'de>,
+        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
+            + From<BufReader<File>>,
     {
         match optional_config_filepath {
-            Some(config_filepath) => self.filepath::<'de, P, D>(config_filepath),
+            Some(config_filepath) => self.filepath::<P, D>(config_filepath),
             None => Ok(self),
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    /// Like [`filepath()`], but additionally also fails when a file does not
+    /// exist at the given config_filepath.
+    fn try_filepath<P, D>(&mut self, config_filepath: P) -> Result<&mut Self, Error>
+    where
+        P: AsRef<Path>,
+        Self: for<'de> Deserialize<'de>,
+        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
+            + From<BufReader<File>>,
+    {
+        if !config_filepath.exists() {
+            Err(Error::FindConfigFile {
+                path: config_filepath
+                    .as_ref()
+                    .to_owned(),
+            })
+        } else {
+            self.filepath::<P, D>(config_filepath)
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    /// Like [`try_filepath()`], but takes an optional filepath.
+    fn try_optional_filepath<P, D>(
+        &mut self,
+        optional_config_filepath: Option<P>,
+    ) -> Result<&mut Self, Error>
+    where
+        P: AsRef<Path>,
+        Self: for<'de> Deserialize<'de>,
+        D: for<'de> Deserializer<'de, Error = Box<(dyn std::error::Error + 'static)>>
+            + From<BufReader<File>>,
+    {
+        match optional_config_filepath {
+            Some(config_filepath) => self.try_filepath::<P, D>(config_filepath),
+            None => Err(Error::FindOptionalConfigFile {
+                optional_path: None,
+            }),
         }
     }
 
@@ -146,6 +181,7 @@ pub trait Configuration: Default {
     }
 }
 
+#[doc(hidden)]
 #[cfg(feature = "serde")]
 #[delegatable_trait_remote]
 trait Deserializer<'de>: Sized {
@@ -459,30 +495,26 @@ trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+}
 
-    // Not public API.
-    #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
-    #[doc(hidden)]
-    fn __deserialize_content<V>(
-        self,
-        _: crate::actually_private::T,
-        visitor: V,
-    ) -> Result<crate::__private::de::Content<'de>, Self::Error>
-    where
-        V: Visitor<'de, Value = crate::__private::de::Content<'de>>,
-    {
-        self.deserialize_any(visitor)
+#[cfg(feature = "yaml")]
+#[derive(Delegate)]
+#[delegate(Deserializer<'de1>, generics = "'de1")]
+pub struct YamlFormat<'de>(serde_yaml::Deserializer<'de>);
+
+#[cfg(feature = "yaml")]
+impl<'de> From<BufReader<File>> for YamlFormat<'de> {
+    fn from(reader: BufReader<File>) -> Self {
+        Self(serde_yaml::Deserializer::<'de>::from_reader(reader))
     }
 }
 
-#[derive(Delegate)]
-#[delegate(Deserializer<'_>)]
-pub enum Format<'a> {
-    #[cfg(feature = "yaml")]
-    Yaml(serde_yaml::Deserializer<'a>),
+#[cfg(feature = "yaml")]
+impl<'de> From<&'de str> for YamlFormat<'de> {
+    fn from(string: &'de str) -> Self {
+        Self(serde_yaml::Deserializer::<'de>::from_str(string))
+    }
 }
-
-trait SizedSerdeError: serde::de::Error + Sized {}
 
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
@@ -531,15 +563,29 @@ pub enum Error {
         path: PathBuf,
         source: Box<dyn std::error::Error>,
     },
+
+    #[cfg(feature = "serde")]
+    #[non_exhaustive]
+    #[snafu(
+        display("The config string {} has incorrect format: {source}", string),
+        visibility(pub)
+    )]
+    ParseConfigString {
+        string: String,
+        source: Box<dyn std::error::Error>,
+    },
 }
 
 // region: IMPORTS
 
 use std::{
     fs::File,
-    io::{BufReader, Read},
+    io::{self, BufReader},
     path::{Path, PathBuf},
 };
+
+#[cfg(feature = "serde")]
+use serde::de::Visitor;
 
 #[cfg(feature = "serde")]
 use ambassador::delegatable_trait_remote;
@@ -555,3 +601,72 @@ use snafu::{self, ResultExt, Snafu};
 use crate::path::ValidPath;
 
 // endregion: IMPORTS
+
+// region: TESTS
+
+#[cfg(test)]
+mod tests {
+    use serde::{Deserialize, Serialize};
+
+    use super::*;
+
+    #[derive(Serialize, Deserialize)]
+    struct Config {
+        some_bool: Option<bool>,
+        some_string: Option<String>,
+        #[serde(skip)]
+        _loaded: bool,
+    }
+
+    impl Configuration for Config {
+        fn new() -> Self {
+            Config {
+                some_bool: None,
+                some_string: None,
+                _loaded: false,
+            }
+        }
+
+        fn config(&mut self, other: Self) -> &mut Self {
+            self.some_bool = self
+                .some_bool
+                .take()
+                .or(other.some_bool);
+            self.some_string = self
+                .some_string
+                .take()
+                .or(other.some_string);
+            self
+        }
+
+        fn env(&mut self) -> &mut Self {
+            todo!()
+        }
+
+        fn set_loaded(&mut self) {
+            self._loaded = true;
+        }
+
+        fn is_loaded(&self) -> bool {
+            self._loaded
+        }
+    }
+
+    impl Default for Config {
+        fn default() -> Self {
+            Self {
+                some_bool: Default::default(),
+                some_string: Default::default(),
+                _loaded: false,
+            }
+        }
+    }
+
+    #[test]
+    fn deserialize_yaml() {
+        let mut config = Config::new();
+        config.string::<&str, YamlFormat>("{some_bool: true}");
+    }
+}
+
+// endregion: TESTS
