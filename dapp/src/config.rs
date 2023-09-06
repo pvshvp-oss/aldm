@@ -53,6 +53,7 @@ pub trait Configuration: Default {
     {
         let other_config = Self::deserialize(D::from(config_string))
             .map_err(|serde_error| {
+                eprintln!("{:#?}", serde_error);
                 // Box::from(serde_error)
                 Box::from("Hello")
             })
@@ -88,6 +89,7 @@ pub trait Configuration: Default {
             let file_reader = BufReader::new(file);
             let other_config = Self::deserialize(D::from(file_reader))
                 .map_err(|serde_error| {
+                    eprintln!("{:#?}", serde_error);
                     // Box::from(serde_error)
                     Box::from("Hello")
                 })
@@ -180,6 +182,7 @@ pub trait Configuration: Default {
     }
 }
 
+// A copy of the remote trait signature to delegate to the newtype
 #[doc(hidden)]
 #[cfg(feature = "serde")]
 #[delegatable_trait_remote]
@@ -608,36 +611,43 @@ use crate::path::ValidPath;
 
 #[cfg(test)]
 mod tests {
-    use serde::{Deserialize, Serialize};
-
-    use super::*;
-
     #[derive(Debug, Serialize, Deserialize)]
-    struct Config {
-        some_bool: Option<bool>,
-        some_string: Option<String>,
+    struct TestConfig {
+        my_bool: Option<bool>,
+        my_string: Option<String>,
         #[serde(skip)]
         _loaded: bool,
     }
 
-    impl Configuration for Config {
+    impl Default for TestConfig {
+        fn default() -> Self {
+            Self {
+                my_bool: Default::default(),
+                my_string: Default::default(),
+                _loaded: false,
+            }
+        }
+    }
+
+    impl Configuration for TestConfig {
         fn new() -> Self {
-            Config {
-                some_bool: None,
-                some_string: None,
+            Self {
+                my_bool: None,
+                my_string: None,
                 _loaded: false,
             }
         }
 
         fn config(&mut self, other: Self) -> &mut Self {
-            self.some_bool = self
-                .some_bool
+            self.my_bool = self
+                .my_bool
                 .take()
-                .or(other.some_bool);
-            self.some_string = self
-                .some_string
+                .or(other.my_bool);
+            self.my_string = self
+                .my_string
                 .take()
-                .or(other.some_string);
+                .or(other.my_string);
+            self.set_loaded();
             self
         }
 
@@ -654,22 +664,56 @@ mod tests {
         }
     }
 
-    impl Default for Config {
-        fn default() -> Self {
-            Self {
-                some_bool: Default::default(),
-                some_string: Default::default(),
-                _loaded: false,
-            }
-        }
+    #[test]
+    fn string_yaml() {
+        let mut test_config = TestConfig::new();
+
+        let test_string_1 = r#"
+            my_bool: true
+        "#;
+        let test_string_2 = r#"
+            my_string: "Hello World!"
+        "#;
+        let test_string_3 = r#"
+            my_bool: false
+        "#;
+        let test_string_4 = r#"
+            my_bool: false
+            my_string: "Hi World!"
+        "#;
+
+        test_config
+            .string::<YamlFormat>(test_string_1)
+            .unwrap();
+        assert_eq!(test_config.my_bool, Some(true));
+        assert_eq!(test_config.my_string, None);
+
+        test_config
+            .string::<YamlFormat>(test_string_2)
+            .unwrap();
+        assert_eq!(test_config.my_bool, Some(true));
+        assert_eq!(test_config.my_string, Some(String::from("Hello World!")));
+
+        test_config
+            .string::<YamlFormat>(test_string_3)
+            .unwrap();
+        assert_eq!(test_config.my_bool, Some(true));
+        assert_eq!(test_config.my_string, Some(String::from("Hello World!")));
+
+        test_config
+            .string::<YamlFormat>(test_string_4)
+            .unwrap();
+        assert_eq!(test_config.my_bool, Some(true));
+        assert_eq!(test_config.my_string, Some(String::from("Hello World!")));
     }
 
-    #[test]
-    fn deserialize_yaml() {
-        let mut config = Config::new();
-        config.string::<YamlFormat>("{some_bool: true}");
-        println!("{:#?}", config);
-    }
+    // region: IMPORTS
+
+    use serde::{Deserialize, Serialize};
+
+    use super::*;
+
+    // endregion: IMPORTS
 }
 
 // endregion: TESTS
