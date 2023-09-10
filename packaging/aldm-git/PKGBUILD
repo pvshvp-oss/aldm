@@ -1,15 +1,15 @@
 #! /usr/bin/env sh
 
-# Maintainer: shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>
+# Maintainer: shiva.patt <shiva.patt.oss@gmail.com, shivanandvp@rebornos.org>
 
 pkgver=0.0.1
 pkgrel=1
 pkgbase='aldm'
 pkgname=('aldm-cli-git' 'aldm-gui-git' 'aldm-db-git')
 arch=('x86_64')
-url="https://github.com/shivanandvp/aldm"
+url="https://github.com/shiva-patt-oss/aldm"
 makedepends=('git' 'cargo' 'gtk4' 'base-devel')
-source=("git+https://github.com/shivanandvp/aldm")
+source=("git+https://github.com/shiva-patt-oss/aldm")
 sha256sums=('SKIP')
 
 prepare() {

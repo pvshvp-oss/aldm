@@ -1,6 +1,6 @@
 #! /usr/bin/env sh
 
-# Maintainer: shivanandvp <shivanandvp.oss@gmail.com, shivanandvp@rebornos.org>
+# Maintainer: shiva.patt <shiva.patt.oss@gmail.com, shivanandvp@rebornos.org>
 
 PKGVER_STUB=0.0.1
 pkgver=0.0.1.2023_08_31_04
@@ -8,7 +8,7 @@ pkgrel=1
 pkgbase='aldm'
 pkgname=('aldm-cli-local' 'aldm-gui-local' 'aldm-db-local')
 arch=('x86_64')
-url="https://github.com/shivanandvp/aldm"
+url="https://github.com/shiva-patt-oss/aldm"
 makedepends=('cargo' 'gtk4' 'base-devel')
 source=()
 sha256sums=()
